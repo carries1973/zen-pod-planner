@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZEN Residential — Leasing Pod Planner</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;height:100vh;overflow:hidden;background:#111827;color:#e5e7eb}
+#sidebar{width:360px;min-width:360px;display:flex;flex-direction:column;background:#1f2937;border-right:1px solid #374151}
+#hdr{padding:12px 14px 8px;background:#111827;border-bottom:1px solid #374151}
+#hdr h1{font-size:13px;font-weight:700;color:#f9fafb;margin-bottom:2px}
+#hdr .sub{font-size:10px;color:#6b7280}
+#tabs{display:flex;border-bottom:1px solid #374151}
+.tab{flex:1;padding:8px 0;font-size:11px;font-weight:600;text-align:center;cursor:pointer;color:#6b7280;border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:#f9fafb;border-bottom-color:#3b82f6}
+#panel-props,#panel-pods{display:flex;flex-direction:column;flex:1;overflow:hidden}
+#filters{padding:8px 10px;border-bottom:1px solid #374151;display:flex;gap:4px;flex-wrap:wrap}
+.fb{padding:3px 9px;border-radius:12px;border:1px solid #374151;background:transparent;color:#9ca3af;font-size:10px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.fb.active{background:#2563eb;border-color:#2563eb;color:white;font-weight:600}
+.fb:hover:not(.active){border-color:#6b7280;color:#e5e7eb}
+#srch-wrap{padding:6px 10px;border-bottom:1px solid #374151}
+#srch{width:100%;padding:5px 9px;background:#111827;border:1px solid #374151;border-radius:5px;color:#e5e7eb;font-size:11px;outline:none}
+#srch::placeholder{color:#4b5563}
+#srch:focus{border-color:#2563eb}
+#prop-list{flex:1;overflow-y:auto}
+.pi{padding:7px 10px;cursor:pointer;border-bottom:1px solid #111827;display:flex;align-items:flex-start;gap:8px;user-select:none;transition:background .1s}
+.pi:hover{background:#2d3748}
+.pi.in-tour{background:#0d2d1a;border-left:3px solid #10b981;padding-left:7px}
+.pi.in-tour .pn{color:#34d399}
+.chk{width:12px;height:12px;border:2px solid #4b5563;border-radius:2px;flex-shrink:0;margin-top:3px;position:relative}
+.pi.in-tour .chk{background:#10b981;border-color:#10b981}
+.pi.in-tour .chk::after{content:'✓';position:absolute;top:-4px;left:-1px;font-size:10px;color:white;font-weight:800}
+.pb{flex:1;min-width:0}
+.pn{font-size:11px;font-weight:600;color:#d1d5db;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pa{font-size:9px;color:#6b7280;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ptags{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap}
+.tg{padding:1px 4px;border-radius:2px;font-size:8px;font-weight:600}
+.t-pod{color:white}
+.t-vac{background:#450a0a;color:#f87171}
+.t-type{background:#2d1b69;color:#a78bfa}
+.pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;border:1px solid rgba(255,255,255,0.3)}
+/* Pod panel */
+#pod-list{flex:1;overflow-y:auto;padding:8px 0}
+.pod-row{padding:8px 12px;border-bottom:1px solid #111827;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .1s}
+.pod-row:hover{background:#2d3748}
+.pod-swatch{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.pod-body{flex:1}
+.pod-name{font-size:12px;font-weight:700;color:#f9fafb;margin-bottom:2px}
+.pod-stats{font-size:10px;color:#6b7280}
+.pod-vac{font-size:11px;font-weight:700}
+.pod-toggle{font-size:10px;color:#4b5563;cursor:pointer;padding:2px 6px;border:1px solid #374151;border-radius:4px}
+.pod-toggle.on{color:#10b981;border-color:#10b981}
+/* Tour panel */
+#tour-panel{background:#111827;border-top:2px solid #dc2626;flex-shrink:0}
+#tour-hdr{padding:7px 10px;background:#dc2626;display:flex;justify-content:space-between;align-items:center}
+#tour-hdr h3{font-size:11px;font-weight:700;color:white}
+#tour-badge{background:rgba(0,0,0,.25);padding:1px 7px;border-radius:10px;font-size:10px;color:white}
+#tour-stops-wrap{max-height:180px;overflow-y:auto}
+#tour-empty{padding:14px;text-align:center;color:#4b5563;font-size:11px}
+.sr{padding:6px 10px;border-bottom:1px solid #1f2937;display:flex;align-items:flex-start;gap:7px}
+.sn{width:18px;height:18px;border-radius:50%;background:#dc2626;color:white;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sb{flex:1;min-width:0}
+.sname{font-size:10px;font-weight:600;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sleg{font-size:9px;color:#f59e0b;margin-top:1px}
+.sleg.long{color:#f87171}
+.srm{color:#4b5563;cursor:pointer;font-size:14px;padding:0 2px;line-height:1.4;flex-shrink:0}
+.srm:hover{color:#dc2626}
+#tour-footer{padding:8px 10px;background:#0d1117;display:flex;justify-content:space-around;border-top:1px solid #1f2937}
+.stat{text-align:center}
+.sv{font-size:16px;font-weight:700}
+.sl{font-size:8px;color:#4b5563;text-transform:uppercase;letter-spacing:.05em;margin-top:1px}
+.cg{color:#10b981}.cy{color:#f59e0b}.cr{color:#ef4444}.cb{color:#60a5fa}
+#feasibility{padding:5px 10px;font-size:10px;font-weight:600;text-align:center;border-top:1px solid #1f2937}
+.fg{background:#052e16;color:#34d399}.fy{background:#422006;color:#fbbf24}.fr{background:#450a0a;color:#f87171}
+#map{flex:1}
+#prog{position:fixed;top:0;left:360px;right:0;height:3px;background:#2563eb;width:0;z-index:9999;pointer-events:none;display:none}
+.leaflet-popup-content-wrapper{background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.leaflet-popup-tip{background:#1f2937}
+.leaflet-popup-content{margin:10px 13px;font-size:11px;line-height:1.6}
+.ppname{font-weight:700;font-size:12px;color:#f9fafb;margin-bottom:3px}
+.ppaddr{color:#9ca3af;margin-bottom:5px;font-size:10px}
+.pptags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px}
+.ppbtn{width:100%;padding:5px;background:#2563eb;color:white;border:none;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer}
+.ppbtn:hover{background:#1d4ed8}
+.ppbtn.added{background:#10b981}
+.ppbtn.added:hover{background:#059669}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#374151;border-radius:2px}
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <div id="hdr">
+    <h1>ZEN Residential — Leasing Pod Planner</h1>
+    <div class="sub">131 properties · 5 Edmonton pods · 3 Calgary pods · Vacancy data May 2026</div>
+  </div>
+  <div id="tabs">
+    <div class="tab active" id="tab-props" onclick="switchTab('props')">Properties</div>
+    <div class="tab" id="tab-pods" onclick="switchTab('pods')">Pods & Coverage</div>
+  </div>
+
+  <!-- PROPERTIES PANEL -->
+  <div id="panel-props">
+    <div id="filters">
+      <button class="fb active" data-city="all">All</button>
+      <button class="fb" data-city="Edmonton">Edmonton</button>
+      <button class="fb" data-city="Calgary">Calgary</button>
+      <button class="fb" data-city="other">Other</button>
+      <button class="fb" data-vac="true" style="border-color:#ef4444;color:#f87171">Vacant Only</button>
+    </div>
+    <div id="srch-wrap"><input id="srch" type="text" placeholder="Search name or address…"/></div>
+    <div id="prop-list"></div>
+  </div>
+
+  <!-- PODS PANEL -->
+  <div id="panel-pods" style="display:none">
+    <div id="pod-list"></div>
+  </div>
+
+  <!-- TOUR PANEL (always visible) -->
+  <div id="tour-panel">
+    <div id="tour-hdr">
+      <h3>Tour Day Planner</h3>
+      <span id="tour-badge">0 stops</span>
+    </div>
+    <div id="tour-stops-wrap">
+      <div id="tour-empty">Click properties to add stops</div>
+      <div id="tour-stops"></div>
+    </div>
+    <div id="tour-footer" style="display:none"></div>
+    <div id="feasibility"></div>
+  </div>
+</div>
+
+<div id="map"></div>
+<div id="prog"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const PROPS=[{"id":1,"name":"SF175 | 3 Bed Upper Suite","addr":"63 Fenwyck Boulevard, Spruce Grove, Alberta","city":"Spruce Grove","type":"Duplex","units":2,"lat":53.551436,"lng":-113.855118,"vacant":0,"pod":14},{"id":2,"name":"Jovie Apartments","addr":"245 Carrington Plaza NW, Calgary, Alberta","city":"Calgary","type":"Luxury Apartment","units":3,"lat":51.182806,"lng":-114.092258,"vacant":10,"pod":7},{"id":3,"name":"SF136 | 1 Bed Basement Suite","addr":"9823 107 Street, Morinville, Alberta","city":"Morinville","type":"Town House","units":2,"lat":53.80221,"lng":-113.624101,"vacant":0,"pod":15},{"id":4,"name":"SF216 | 4 Bed Full House","addr":"11820 61 Street NW, Edmonton, Alberta","city":"Edmonton","type":"House","units":1,"lat":53.571319,"lng":-113.409601,"vacant":0,"pod":2},{"id":5,"name":"SF216 | 2 Bed Basement Suite","addr":"11820 61 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":1,"lat":53.552231,"lng":-113.526051,"vacant":0,"pod":1},{"id":6,"name":"SF221 | 2 Bed Upper Unit","addr":"12224 60 Street NW, Edmonton, Alberta","city":"Edmonton","type":"House","units":1,"lat":53.577123,"lng":-113.433884,"vacant":0,"pod":2},{"id":7,"name":"SF234 | 3 Bed Basement Suite","addr":"12210 57 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":2,"lat":53.576884,"lng":-113.429284,"vacant":0,"pod":2},{"id":8,"name":"SF292 | Modern Suites","addr":"11935 46 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Duplex","units":2,"lat":53.572965,"lng":-113.412054,"vacant":0,"pod":2},{"id":9,"name":"Apple Apartments","addr":"14903 102 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.543091,"lng":-113.578565,"vacant":0,"pod":1},{"id":10,"name":"Autumn Manor","addr":"9132 149 Street, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":2,"lat":53.525924,"lng":-113.578199,"vacant":1,"pod":1},{"id":11,"name":"Balwin Manor","addr":"6704 131A Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.59132,"lng":-113.445443,"vacant":0,"pod":0},{"id":12,"name":"SF309 | Full Home Rental","addr":"244 Marquis Boulevard NE, Edmonton, Alberta","city":"Edmonton","type":"Town House","units":1,"lat":53.638285,"lng":-113.341888,"vacant":0,"pod":2},{"id":13,"name":"Brighton Court","addr":"10525 156 Street, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":4,"lat":53.548784,"lng":-113.589896,"vacant":10,"pod":1},{"id":14,"name":"Carina Apartments","addr":"9720 149 Street, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":2,"lat":53.535311,"lng":-113.578535,"vacant":0,"pod":1},{"id":15,"name":"Catalina Estates","addr":"5910 118 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":1,"lat":53.570463,"lng":-113.432665,"vacant":0,"pod":2},{"id":16,"name":"Cedar Manor","addr":"12040 82 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.574765,"lng":-113.530883,"vacant":0,"pod":1},{"id":17,"name":"Chicklet House","addr":"10304 107 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":1,"lat":53.551507,"lng":-113.497645,"vacant":0,"pod":1},{"id":18,"name":"Chrysalis Apartments","addr":"10716 102 Street, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":3,"lat":53.551844,"lng":-113.495675,"vacant":1,"pod":1},{"id":19,"name":"Cielo","addr":"235 Willis Crescent, Saskatoon, Saskatchewan","city":"Saskatoon","type":"Mid Rise Apartment","units":6,"lat":52.088405,"lng":-106.631432,"vacant":0,"pod":8},{"id":20,"name":"Copper Manor","addr":"13011 83 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":1,"lat":53.589461,"lng":-113.468902,"vacant":0,"pod":0},{"id":21,"name":"Courts Manor","addr":"12239 82 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":3,"lat":53.577662,"lng":-113.46717,"vacant":0,"pod":0},{"id":22,"name":"Crestmark Place","addr":"10842 107 Street, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":3,"lat":53.554401,"lng":-113.644018,"vacant":0,"pod":1},{"id":23,"name":"Danton Manor","addr":"14519 92 Street, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":6,"lat":53.607472,"lng":-113.481438,"vacant":0,"pod":0},{"id":24,"name":"Douglas Manor","addr":"10757 83 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":0,"lat":53.518941,"lng":-113.508897,"vacant":0,"pod":1},{"id":25,"name":"Edge Living","addr":"3011 James Mowatt Trail SW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":4,"lat":53.403634,"lng":-113.539155,"vacant":0,"pod":3},{"id":26,"name":"Eleven","addr":"1055 11 Street SW, Calgary, Alberta","city":"Calgary","type":"High Rise Apartment","units":15,"lat":51.043532,"lng":-114.089991,"vacant":13,"pod":6},{"id":27,"name":"Gala Apartments","addr":"9638 156 Street, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":3,"lat":53.534196,"lng":-113.590501,"vacant":0,"pod":1},{"id":28,"name":"Glenmore Manor","addr":"10644 81 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":2,"lat":53.517134,"lng":-113.505656,"vacant":2,"pod":1},{"id":29,"name":"Grandview Manor","addr":"11705 83 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":3,"lat":53.569016,"lng":-113.468628,"vacant":0,"pod":0},{"id":30,"name":"Greenstone Park","addr":"11350 128 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":4,"lat":53.57012,"lng":-113.423404,"vacant":2,"pod":2},{"id":31,"name":"Greyson","addr":"241 Willis Crescent, Saskatoon, Saskatchewan","city":"Saskatoon","type":"Mid Rise Apartment","units":3,"lat":52.088347,"lng":-106.629553,"vacant":0,"pod":8},{"id":32,"name":"Hamlet Village","addr":"11647 124 Street, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.568178,"lng":-113.535707,"vacant":0,"pod":1},{"id":33,"name":"Harmony at the Market","addr":"201 Festival Way, Sherwood Park, Alberta","city":"Sherwood Park","type":"Low Rise Apartment","units":5,"lat":53.527262,"lng":-113.297407,"vacant":3,"pod":10},{"id":34,"name":"Harmony at Walker Lakes","addr":"241 Watt Common SW, Edmonton, Alberta","city":"Edmonton","type":"Luxury Apartment","units":10,"lat":53.421279,"lng":-113.419319,"vacant":1,"pod":4},{"id":35,"name":"House Acadian","addr":"11535 124 Street, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":3,"lat":53.566296,"lng":-113.533792,"vacant":0,"pod":1},{"id":36,"name":"Jasmine Apartments","addr":"10515 70 Avenue, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":4,"lat":53.506174,"lng":-113.50154,"vacant":2,"pod":4},{"id":37,"name":"Junction 21","addr":"3870 Market Street SE, Calgary, Alberta","city":"Calgary","type":"Town House","units":4,"lat":50.879539,"lng":-113.956429,"vacant":0,"pod":5},{"id":38,"name":"Junction 88","addr":"3859 Market Street SE, Calgary, Alberta","city":"Calgary","type":"Mid Rise Apartment","units":9,"lat":50.879539,"lng":-113.956429,"vacant":54,"pod":5},{"id":39,"name":"Kafa Manor","addr":"12717 119 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.585482,"lng":-113.526374,"vacant":0,"pod":0},{"id":40,"name":"Lawson Village","addr":"180 Pinehouse Drive, Saskatoon, Saskatchewan","city":"Saskatoon","type":"Mid Rise Apartment","units":2,"lat":52.169207,"lng":-106.6283,"vacant":0,"pod":8},{"id":41,"name":"Layali House","addr":"13710 64 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.600112,"lng":-113.440431,"vacant":0,"pod":0},{"id":42,"name":"Legacy Place","addr":"150 Legacy Main Street SE, Calgary, Alberta","city":"Calgary","type":"Mid Rise Apartment","units":5,"lat":50.860839,"lng":-114.017847,"vacant":186,"pod":5},{"id":43,"name":"Linden Park at Erin Ridge","addr":"165 Element Drive North, St. Albert, Alberta","city":"St. Albert","type":"Luxury Apartment","units":3,"lat":53.678297,"lng":-113.6362,"vacant":0,"pod":11},{"id":44,"name":"Link 95","addr":"9502 86 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Luxury Apartment","units":2,"lat":53.532043,"lng":-113.459639,"vacant":1,"pod":2},{"id":45,"name":"Lockwood Arms","addr":"193 Lockwood Road, Regina, Saskatchewan","city":"Regina","type":"Mid Rise Apartment","units":2,"lat":50.401505,"lng":-104.626019,"vacant":0,"pod":9},{"id":46,"name":"Lorinda Court","addr":"10240 118 Street, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.544001,"lng":-113.525141,"vacant":1,"pod":1},{"id":47,"name":"Maple Leaf Court","addr":"9140 144 Avenue, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":6,"lat":53.60598,"lng":-113.482043,"vacant":0,"pod":0},{"id":48,"name":"Mid City Manor","addr":"10250 118 Street, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":3,"lat":53.54423,"lng":-113.525141,"vacant":4,"pod":1},{"id":49,"name":"Millcrest Apartments","addr":"554 Millbourne Road East, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":3,"lat":53.47258,"lng":-113.446079,"vacant":2,"pod":4},{"id":50,"name":"SF218 | 2 Bed Units","addr":"11936 47 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Garden Home","units":2,"lat":53.572976,"lng":-113.413901,"vacant":0,"pod":2},{"id":51,"name":"SF209 | 2 Bed Basement","addr":"11208 51 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":0,"lat":53.567507,"lng":-113.420354,"vacant":0,"pod":2},{"id":52,"name":"SF223 | 2 Bed Main Floor","addr":"12021 55 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Main Floor","units":1,"lat":53.574026,"lng":-113.425922,"vacant":0,"pod":2},{"id":53,"name":"SF335 | 3 Bed Townhome","addr":"10335 135 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Town House","units":2,"lat":53.545747,"lng":-113.554293,"vacant":0,"pod":1},{"id":54,"name":"SF336 | 3 Bed Townhome","addr":"10920 130 Street, Edmonton, Alberta","city":"Edmonton","type":"Town House","units":4,"lat":53.554538,"lng":-113.546636,"vacant":0,"pod":1},{"id":55,"name":"Monarch Manor","addr":"10654 114 Street, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":3,"lat":53.551174,"lng":-113.518115,"vacant":1,"pod":1},{"id":56,"name":"Neu Manor","addr":"10330 113 Street, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":3,"lat":53.499473,"lng":-113.524641,"vacant":0,"pod":4},{"id":57,"name":"North Haven Estates","addr":"13660 38 Street, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":6,"lat":53.597693,"lng":-113.399917,"vacant":0,"pod":2},{"id":58,"name":"Norwood Village","addr":"11332 95 Street, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.563357,"lng":-113.487277,"vacant":0,"pod":0},{"id":59,"name":"Oakwood Manor","addr":"11348 97 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":1,"lat":53.564081,"lng":-113.492331,"vacant":0,"pod":0},{"id":60,"name":"Palisade Garden","addr":"10825 113 Street, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.553772,"lng":-113.515412,"vacant":0,"pod":1},{"id":61,"name":"Park Centre Place","addr":"2014 Sherwood Drive, Sherwood Park, Alberta","city":"Sherwood Park","type":"Luxury Apartment","units":12,"lat":53.570396,"lng":-113.295488,"vacant":3,"pod":10},{"id":62,"name":"Queensgate Manor","addr":"10610 87 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":4,"lat":53.549696,"lng":-113.452845,"vacant":0,"pod":2},{"id":63,"name":"Richard House & Kerry Manor","addr":"10210 118 Street, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":4,"lat":53.543315,"lng":-113.52514,"vacant":5,"pod":1},{"id":64,"name":"Rideau Place","addr":"10620 42 Avenue, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":4,"lat":53.478903,"lng":-113.505702,"vacant":0,"pod":4},{"id":65,"name":"Riverview Pointe","addr":"25 Clydesdale Avenue, Cochrane, Alberta","city":"Cochrane","type":"Mid Rise Apartment","units":14,"lat":51.201191,"lng":-114.501474,"vacant":11,"pod":12},{"id":66,"name":"Royal Lady","addr":"10746 102 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":1,"lat":53.552526,"lng":-113.495669,"vacant":0,"pod":1},{"id":67,"name":"Royal Manor","addr":"10215 108 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.552931,"lng":-113.496641,"vacant":0,"pod":1},{"id":68,"name":"RP158 | 2 Bed Condo, Okotoks","addr":"170 North Railway Street, Okotoks, Alberta","city":"Okotoks","type":"Condo Unit","units":3,"lat":50.722368,"lng":-113.960405,"vacant":0,"pod":13},{"id":69,"name":"RP169 | 1 Bed Condo Calgary SW","addr":"7301 4A Street SW, Calgary, Alberta","city":"Calgary","type":"Condo Unit","units":2,"lat":51.019655,"lng":-114.073972,"vacant":0,"pod":6},{"id":70,"name":"SF135 | 2 Bed Townhouse NE Edm","addr":"17832 78 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Town House","units":1,"lat":53.641722,"lng":-113.484809,"vacant":0,"pod":0},{"id":71,"name":"SF149 | 3 Bed Townhouse Redstone","addr":"301 Redstone Boulevard NE, Calgary, Alberta","city":"Calgary","type":"Town House","units":0,"lat":51.170065,"lng":-113.951275,"vacant":0,"pod":7},{"id":72,"name":"SF168 | 1 Bed Condo Mahogany","addr":"20 Masters Drive SE, Calgary, Alberta","city":"Calgary","type":"Condo Unit","units":5,"lat":50.894726,"lng":-113.910068,"vacant":0,"pod":5},{"id":73,"name":"SF168 | 2 Bed/1 Bath Mahogany","addr":"20 Masters Drive SE, Calgary, Alberta","city":"Calgary","type":"Condo Unit","units":1,"lat":50.894726,"lng":-113.910068,"vacant":0,"pod":5},{"id":74,"name":"SF168 | 2 Bed/2.5 Bath Mahogany","addr":"20 Masters Drive SE, Calgary, Alberta","city":"Calgary","type":"Condo Unit","units":2,"lat":50.894726,"lng":-113.910068,"vacant":0,"pod":5},{"id":75,"name":"SF168 | 3 Bed Mahogany","addr":"20 Masters Drive SE, Calgary, Alberta","city":"Calgary","type":"Condo Unit","units":1,"lat":50.894726,"lng":-113.910068,"vacant":0,"pod":5},{"id":76,"name":"SF175 | 1 Bed Lower Suite","addr":"69 Fenwyck Boulevard, Spruce Grove, Alberta","city":"Spruce Grove","type":"Basement","units":1,"lat":53.551636,"lng":-113.854573,"vacant":0,"pod":14},{"id":77,"name":"SF182 | 3 Bed Townhome Redstone","addr":"137 Red Embers Link NE, Calgary, Alberta","city":"Calgary","type":"Town House","units":1,"lat":51.167626,"lng":-113.948756,"vacant":0,"pod":7},{"id":78,"name":"SF203 | 2 Bed Lower Suite","addr":"12148 105 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":1,"lat":53.576589,"lng":-113.501421,"vacant":0,"pod":0},{"id":79,"name":"SF203 | 2 Bed Lower Suite B","addr":"12148 105 Street NW, Edmonton, Alberta","city":"Edmonton","type":"House","units":1,"lat":53.576589,"lng":-113.501421,"vacant":0,"pod":0},{"id":80,"name":"SF203 | 4 Bed Main Floor","addr":"12148 105 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Main Floor","units":1,"lat":53.576589,"lng":-113.501421,"vacant":0,"pod":0},{"id":81,"name":"SF204 | Multiple Units","addr":"11813 47 Street NW, Edmonton, Alberta","city":"Edmonton","type":"House","units":6,"lat":53.570741,"lng":-113.413594,"vacant":0,"pod":2},{"id":82,"name":"SF206 | 2 Bed Upper Suite","addr":"7612 136 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Fourplex","units":2,"lat":53.598822,"lng":-113.458719,"vacant":0,"pod":0},{"id":83,"name":"SF208 | 3 Bed Basement Suite","addr":"11204 51 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":0,"lat":53.567416,"lng":-113.420356,"vacant":0,"pod":2},{"id":84,"name":"SF208 | 2 Bed Garden Suite","addr":"11204 51 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Garage Suite","units":0,"lat":53.567416,"lng":-113.420356,"vacant":0,"pod":2},{"id":85,"name":"SF209 | 2 Bed Upper Unit","addr":"11208 51 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Main Floor","units":1,"lat":53.567507,"lng":-113.420354,"vacant":0,"pod":2},{"id":86,"name":"SF212 | Multiple Units 6404","addr":"6404 119 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"House","units":3,"lat":53.571985,"lng":-113.44008,"vacant":0,"pod":2},{"id":87,"name":"SF212 | 6 Bed Full House 6406","addr":"6406 119 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"House","units":1,"lat":53.571986,"lng":-113.440186,"vacant":0,"pod":2},{"id":88,"name":"SF213 | 4 Bed Main Floor","addr":"8639 80 Street NW, Edmonton, Alberta","city":"Edmonton","type":"House","units":1,"lat":53.523357,"lng":-113.450219,"vacant":0,"pod":4},{"id":89,"name":"SF214 | Monarch8","addr":"11835 54 Street NW, Edmonton, Alberta","city":"Edmonton","type":"House","units":1,"lat":53.571193,"lng":-113.42441,"vacant":0,"pod":2},{"id":90,"name":"SF214 | 4 Bed Main Floor","addr":"11837 54 Street NW, Edmonton, Alberta","city":"Edmonton","type":"House","units":1,"lat":53.571236,"lng":-113.42441,"vacant":0,"pod":2},{"id":91,"name":"SF217 | 2 Bed Basement","addr":"12039 55 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":1,"lat":53.574436,"lng":-113.425921,"vacant":0,"pod":2},{"id":92,"name":"SF221 | 2 Bed Basement","addr":"12224 60 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":1,"lat":53.577123,"lng":-113.433884,"vacant":0,"pod":2},{"id":93,"name":"SF221 | 3 Bed Main Floor","addr":"12224 60 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Main Floor","units":1,"lat":53.577123,"lng":-113.433884,"vacant":0,"pod":2},{"id":94,"name":"SF222 | 4 Bed Main Floor","addr":"12228 60 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Main Floor","units":1,"lat":53.577187,"lng":-113.433883,"vacant":0,"pod":2},{"id":95,"name":"SF223 | Main Floor Home B","addr":"12021 55 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Main Floor","units":1,"lat":53.574026,"lng":-113.425922,"vacant":0,"pod":2},{"id":96,"name":"SF224 | 4 Bed Main Floor","addr":"12025 55 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":1,"lat":53.574117,"lng":-113.425922,"vacant":0,"pod":2},{"id":97,"name":"SF225 | Multiple Units","addr":"12521 77 Street NW, Edmonton, Alberta","city":"Edmonton","type":"House","units":2,"lat":53.581862,"lng":-113.459811,"vacant":0,"pod":0},{"id":98,"name":"SF226 | 4 Bed Main Floor","addr":"12525 77 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Main Floor","units":1,"lat":53.582423,"lng":-113.450516,"vacant":0,"pod":0},{"id":99,"name":"SF227 | 1 Bed Garden Suite","addr":"12032 54 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Garage Suite","units":1,"lat":53.574364,"lng":-113.424702,"vacant":0,"pod":2},{"id":100,"name":"SF228 | 2 Bed Basement Suite","addr":"11205 68 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":4,"lat":53.564273,"lng":-113.442111,"vacant":0,"pod":2},{"id":101,"name":"SF228 | 4 Bed Main Floor","addr":"11205 68 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Main Floor","units":1,"lat":53.564273,"lng":-113.442111,"vacant":0,"pod":2},{"id":102,"name":"SF229 | 4 Bed Main Floor","addr":"12035 59 Street NW, Edmonton, Alberta","city":"Edmonton","type":"House","units":1,"lat":53.574585,"lng":-113.432142,"vacant":0,"pod":2},{"id":103,"name":"SF230 | 1 Bed Garden Suite","addr":"11947 56 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Garage Suite","units":1,"lat":53.573291,"lng":-113.427448,"vacant":0,"pod":2},{"id":104,"name":"SF231 | 3 Bed Basement Suite","addr":"11354 53 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":2,"lat":53.56398,"lng":-113.479782,"vacant":0,"pod":0},{"id":105,"name":"SF232 | Multiple Units","addr":"3607 118 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":3,"lat":53.570163,"lng":-113.397849,"vacant":0,"pod":2},{"id":106,"name":"SF233 | 4 Bed Main Floor","addr":"12420 76 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Main Floor","units":1,"lat":53.580304,"lng":-113.458563,"vacant":0,"pod":0},{"id":107,"name":"SF236 | 3 Bed Main Floor","addr":"11358 53 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Main Floor","units":0,"lat":53.570177,"lng":-113.423403,"vacant":0,"pod":2},{"id":108,"name":"SF236 | 3 Bed Basement Suite","addr":"11358 53 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":0,"lat":53.570177,"lng":-113.423403,"vacant":0,"pod":2},{"id":109,"name":"SF237 | 2 Bed Apartment","addr":"3611 118 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Fourplex","units":0,"lat":53.570164,"lng":-113.39754,"vacant":0,"pod":2},{"id":110,"name":"SF238 | Multiple Units","addr":"11425 67 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Duplex","units":2,"lat":53.567843,"lng":-113.442867,"vacant":0,"pod":2},{"id":111,"name":"SF290 | Multiple Units","addr":"5915 119 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Fourplex","units":5,"lat":53.604385,"lng":-113.432852,"vacant":0,"pod":0},{"id":112,"name":"SF295 | Multiple Units","addr":"11827 47 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Triplex","units":4,"lat":53.571134,"lng":-113.413594,"vacant":0,"pod":2},{"id":113,"name":"SF334 | 3 Bed Townhome SW Edm","addr":"1023 173 Street SW, Edmonton, Alberta","city":"Edmonton","type":"Town House","units":1,"lat":53.426847,"lng":-113.618523,"vacant":0,"pod":3},{"id":114,"name":"SF337 | 3 Bed Main Floor A","addr":"10314 147 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Main Floor","units":2,"lat":53.544561,"lng":-113.569545,"vacant":0,"pod":1},{"id":115,"name":"SF337 | 2 Bed Basement A","addr":"10314 147 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":2,"lat":53.544561,"lng":-113.569545,"vacant":0,"pod":1},{"id":116,"name":"SF338 | 3 Bed Main Floor B","addr":"10320 147 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Main Floor","units":1,"lat":53.544613,"lng":-113.574985,"vacant":0,"pod":1},{"id":117,"name":"SF338 | 2 Bed Basement B","addr":"10320 147 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Basement","units":3,"lat":53.544613,"lng":-113.574985,"vacant":0,"pod":1},{"id":118,"name":"Sky Manor","addr":"9612 156 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.533472,"lng":-113.590506,"vacant":5,"pod":1},{"id":119,"name":"Skyview Apartments","addr":"181 Skyview Bay NE, Calgary, Alberta","city":"Calgary","type":"Mid Rise Apartment","units":9,"lat":51.156488,"lng":-113.956866,"vacant":0,"pod":7},{"id":120,"name":"The Aspen","addr":"6031 Currents Drive NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":3,"lat":53.435616,"lng":-113.599285,"vacant":558,"pod":3},{"id":121,"name":"The Barracks Apartments","addr":"6855 Ad Astra Boulevard NE, Edmonton, Alberta","city":"Edmonton","type":"Luxury Apartment","units":10,"lat":53.606978,"lng":-113.513635,"vacant":7,"pod":0},{"id":122,"name":"The Loft","addr":"744 4 Avenue SW, Calgary, Alberta","city":"Calgary","type":"Mid Rise Apartment","units":3,"lat":51.050046,"lng":-114.078248,"vacant":18,"pod":6},{"id":123,"name":"The Manning","addr":"3611 145 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.60841,"lng":-113.396415,"vacant":0,"pod":2},{"id":124,"name":"The Parks","addr":"10135 108 Street NW, Edmonton, Alberta","city":"Edmonton","type":"High Rise Apartment","units":31,"lat":53.541795,"lng":-113.506472,"vacant":113,"pod":1},{"id":125,"name":"The Residence","addr":"9730 106 Street NW, Edmonton, Alberta","city":"Edmonton","type":"High Rise Apartment","units":1,"lat":53.534844,"lng":-113.503076,"vacant":0,"pod":1},{"id":126,"name":"Trails Edge","addr":"7301 4A Street SW, Calgary, Alberta","city":"Calgary","type":"Low Rise Apartment","units":2,"lat":51.019655,"lng":-114.073972,"vacant":0,"pod":6},{"id":127,"name":"Trailside at Skyview Ranch","addr":"216 Skyview Ranch Road NE, Calgary, Alberta","city":"Calgary","type":"Mid Rise Apartment","units":15,"lat":51.163779,"lng":-113.958303,"vacant":2,"pod":7},{"id":128,"name":"Tuscany Villa Apartments","addr":"10644 109 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":3,"lat":53.550755,"lng":-113.508944,"vacant":2,"pod":1},{"id":129,"name":"Villa Grande Apartments","addr":"10005 154 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":3,"lat":53.539642,"lng":-113.58642,"vacant":3,"pod":1},{"id":130,"name":"Vista on 78th","addr":"10820 78 Avenue NW, Edmonton, Alberta","city":"Edmonton","type":"Low Rise Apartment","units":4,"lat":53.514306,"lng":-113.51034,"vacant":1,"pod":1},{"id":131,"name":"Woodridge Place","addr":"10139 158 Street NW, Edmonton, Alberta","city":"Edmonton","type":"Mid Rise Apartment","units":2,"lat":53.619232,"lng":-113.498134,"vacant":0,"pod":0}];
+const PODS=[{"id":0,"centroid":[53.58924627272727,-113.47732368181818],"radius":5.855886552542599,"name":"Edm North","color":"#f59e0b"},{"id":1,"centroid":[53.544787848484845,-113.5421523030303],"radius":6.814008342805069,"name":"Edm Central/West","color":"#3b82f6"},{"id":2,"centroid":[53.57342169230769,-113.42313089743588],"radius":8.986111852204873,"name":"Edm North East","color":"#10b981"},{"id":3,"centroid":[53.422032333333334,-113.58565433333332],"radius":3.6990634336676087,"name":"Edm SW / Windermere","color":"#8b5cf6"},{"id":4,"centroid":[53.48362766666667,-113.47458333333333],"radius":7.8393449151929016,"name":"Edm South","color":"#ec4899"},{"id":5,"centroid":[50.88554585714286,-113.938711],"radius":6.195285108425913,"name":"Cal SE / Legacy","color":"#ef4444"},{"id":6,"centroid":[51.033222,-114.07904575],"radius":1.871574685918161,"name":"Cal Downtown/SW","color":"#06b6d4"},{"id":7,"centroid":[51.1681528,-113.9814916],"radius":7.891806278020493,"name":"Cal NE / Skyview","color":"#84cc16"},{"id":8,"centroid":[52.115319666666664,-106.62976166666665],"radius":5.992828216720507,"name":"Saskatoon","color":"#6b7280"},{"id":9,"centroid":[50.401505,-104.626019],"radius":1.5,"name":"Regina","color":"#6b7280"},{"id":10,"centroid":[53.548829,-113.2964475],"radius":2.3989790417462693,"name":"Sherwood Park","color":"#6b7280"},{"id":11,"centroid":[53.678297,-113.6362],"radius":1.5,"name":"St. Albert","color":"#6b7280"},{"id":12,"centroid":[51.201191,-114.501474],"radius":1.5,"name":"Cochrane","color":"#6b7280"},{"id":13,"centroid":[50.722368,-113.960405],"radius":1.5,"name":"Okotoks","color":"#6b7280"},{"id":14,"centroid":[53.551536,-113.85484550000001],"radius":1.5,"name":"Spruce Grove","color":"#6b7280"},{"id":15,"centroid":[53.80221,-113.624101],"radius":1.5,"name":"Morinville","color":"#6b7280"}];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let tour=[], markers={}, podLayers={}, podVisible={}, clusterGroup, routeLayer;
+let currentCity='all', vacantOnly=false, routeDebounce, lastLegs=[];
+
+const podColor = id => PODS[id]?.color || '#6b7280';
+const podName  = id => PODS[id]?.name  || `Pod ${id}`;
+
+// ── Map ───────────────────────────────────────────────────────────────────────
+const map = L.map('map',{zoomControl:true}).setView([53.5461,-113.4938],10);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+  attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19
+}).addTo(map);
+
+clusterGroup = L.markerClusterGroup({
+  maxClusterRadius:35, spiderfyOnMaxZoom:true, showCoverageOnHover:false,
+  iconCreateFunction(c){
+    const n=c.getChildCount(),s=n<10?30:n<50?36:42;
+    return L.divIcon({html:`<div style="width:${s}px;height:${s}px;border-radius:50%;background:rgba(37,99,235,.8);border:2px solid rgba(96,165,250,.7);display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.5)">${n}</div>`,className:'',iconSize:[s,s],iconAnchor:[s/2,s/2]});
+  }
+});
+map.addLayer(clusterGroup);
+
+// ── Pod circles ───────────────────────────────────────────────────────────────
+function drawPods(){
+  PODS.forEach(pod=>{
+    if(pod.id>=8){return;} // hide out-of-city tiny pods from initial view
+    const col=pod.color;
+    const circle=L.circle([pod.centroid[0],pod.centroid[1]],{
+      radius:pod.radius*1000,
+      color:col,weight:2,dashArray:'8,5',
+      fillColor:col,fillOpacity:0.07,
+      interactive:false
+    });
+    const label=L.marker([pod.centroid[0],pod.centroid[1]],{
+      icon:L.divIcon({
+        html:`<div style="background:${col}cc;color:white;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;white-space:nowrap;border:1px solid ${col};box-shadow:0 2px 6px rgba(0,0,0,.5)">${pod.name}</div>`,
+        className:'',iconAnchor:[40,12]
+      }),interactive:false
+    });
+    const members=PROPS.filter(p=>p.pod===pod.id);
+    const totalVac=members.reduce((s,p)=>s+p.vacant,0);
+    podLayers[pod.id]={circle,label,members:members.length,vacant:totalVac};
+    podVisible[pod.id]=true;
+    circle.addTo(map);
+    label.addTo(map);
+  });
+}
+
+function togglePod(id){
+  podVisible[id]=!podVisible[id];
+  const layer=podLayers[id];
+  if(!layer) return;
+  if(podVisible[id]){layer.circle.addTo(map);layer.label.addTo(map);}
+  else{map.removeLayer(layer.circle);map.removeLayer(layer.label);}
+  renderPodList();
+}
+
+// ── Markers ───────────────────────────────────────────────────────────────────
+function makeIcon(p, inTour, tourIdx){
+  const col = podColor(p.pod);
+  const vac = p.vacant;
+  if(inTour){
+    return L.divIcon({
+      html:`<div style="position:relative"><div style="width:26px;height:26px;border-radius:50%;background:#dc2626;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;color:white;font-size:10px;font-weight:800">${tourIdx+1}</div></div>`,
+      className:'',iconSize:[26,26],iconAnchor:[13,13]
+    });
+  }
+  const size = vac>50?18:vac>10?15:vac>0?13:10;
+  const badge = vac>0?`<div style="position:absolute;top:-5px;right:-5px;background:#dc2626;color:white;border-radius:8px;font-size:8px;font-weight:800;padding:0 3px;min-width:13px;text-align:center;border:1px solid #111;line-height:14px">${vac>99?'99+':vac}</div>`:'';
+  return L.divIcon({
+    html:`<div style="position:relative"><div style="width:${size}px;height:${size}px;border-radius:50%;background:${col};border:${vac>0?'2px solid white':'1.5px solid rgba(255,255,255,.5)'};box-shadow:0 1px 5px rgba(0,0,0,.5)"></div>${badge}</div>`,
+    className:'',iconSize:[size,size],iconAnchor:[size/2,size/2]
+  });
+}
+
+function buildPopup(p){
+  const col=podColor(p.pod), pname=podName(p.pod);
+  const inTour=tour.includes(p.id);
+  const vacText=p.vacant>0?`<span class="tg t-vac">${p.vacant} vacant now</span>`:'';
+  return `<div class="ppname">${p.name}</div>
+    <div class="ppaddr">${p.addr.replace(', Canada','')}</div>
+    <div class="pptags">
+      <span class="tg t-pod" style="background:${col}cc">${pname}</span>
+      <span class="tg t-type">${p.type}</span>
+      ${vacText}
+    </div>
+    <button class="ppbtn ${inTour?'added':''}" id="ppb-${p.id}">${inTour?'✓ Remove from Tour':'+ Add to Tour Day'}</button>`;
+}
+
+function initMarker(p){
+  const inTour=tour.includes(p.id), idx=tour.indexOf(p.id);
+  const m=L.marker([p.lat,p.lng],{icon:makeIcon(p,inTour,idx)});
+  m.bindPopup(()=>buildPopup(p),{maxWidth:240,minWidth:190});
+  m.on('popupopen',()=>{
+    setTimeout(()=>{
+      const btn=document.getElementById(`ppb-${p.id}`);
+      if(btn) btn.onclick=()=>{toggleTour(p.id);m.closePopup();};
+    },30);
+  });
+  markers[p.id]=m;
+  clusterGroup.addLayer(m);
+}
+
+function refreshIcon(p){
+  const m=markers[p.id]; if(!m) return;
+  m.setIcon(makeIcon(p,tour.includes(p.id),tour.indexOf(p.id)));
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(t){
+  document.getElementById('tab-props').classList.toggle('active',t==='props');
+  document.getElementById('tab-pods').classList.toggle('active',t==='pods');
+  document.getElementById('panel-props').style.display=t==='props'?'flex':'none';
+  document.getElementById('panel-pods').style.display=t==='pods'?'flex':'none';
+}
+
+// ── Render Pods Panel ─────────────────────────────────────────────────────────
+function renderPodList(){
+  const el=document.getElementById('pod-list');
+  const mainPods=PODS.filter(p=>p.id<8);
+  el.innerHTML=mainPods.map(pod=>{
+    const vis=podVisible[pod.id]!==false;
+    const layer=podLayers[pod.id]||{members:0,vacant:0};
+    const vacCol=layer.vacant>50?'cr':layer.vacant>10?'cy':'cg';
+    return `<div class="pod-row" onclick="flyToPod(${pod.id})">
+      <div class="pod-swatch" style="background:${pod.color}"></div>
+      <div class="pod-body">
+        <div class="pod-name">${pod.name}</div>
+        <div class="pod-stats">${layer.members} properties · <span class="pod-vac ${vacCol}">${layer.vacant} vacant now</span></div>
+      </div>
+      <div class="pod-toggle ${vis?'on':''}" onclick="event.stopPropagation();togglePod(${pod.id})">${vis?'Visible':'Hidden'}</div>
+    </div>`;
+  }).join('');
+  // Add out-of-city summary
+  const outPods=PODS.filter(p=>p.id>=8&&p.id<16);
+  const outRows=outPods.map(pod=>{
+    const mems=PROPS.filter(p=>p.pod===pod.id);
+    const vac=mems.reduce((s,p)=>s+p.vacant,0);
+    return `<div class="pod-row" onclick="flyToPodCoords(${JSON.stringify(pod.centroid)})">
+      <div class="pod-swatch" style="background:#6b7280"></div>
+      <div class="pod-body">
+        <div class="pod-name">${pod.name}</div>
+        <div class="pod-stats">${mems.length} properties · ${vac} vacant</div>
+      </div>
+      <div class="pod-toggle" style="color:#6b7280">Out-of-city</div>
+    </div>`;
+  }).join('');
+  el.innerHTML+=`<div style="padding:6px 12px 3px;font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:.05em;font-weight:600;border-top:1px solid #374151;margin-top:4px">Out-of-City</div>${outRows}`;
+}
+
+function flyToPod(id){
+  const pod=PODS[id]; if(!pod) return;
+  map.flyTo([pod.centroid[0],pod.centroid[1]], 12, {duration:1.2});
+}
+function flyToPodCoords(c){
+  map.flyTo([c[0],c[1]], 12, {duration:1.2});
+}
+
+// ── Render Property List ──────────────────────────────────────────────────────
+function renderList(){
+  const srch=document.getElementById('srch').value.toLowerCase();
+  const list=document.getElementById('prop-list');
+  const filtered=PROPS.filter(p=>{
+    const cityOk=currentCity==='all'||(currentCity==='other'?(p.city!=='Edmonton'&&p.city!=='Calgary'):p.city===currentCity);
+    const vacOk=!vacantOnly||p.vacant>0;
+    const srchOk=!srch||p.name.toLowerCase().includes(srch)||p.addr.toLowerCase().includes(srch);
+    return cityOk&&vacOk&&srchOk;
+  });
+  const inT=id=>tour.includes(id);
+  list.innerHTML=filtered.map(p=>`
+    <div class="pi ${inT(p.id)?'in-tour':''}" onclick="toggleTour(${p.id})">
+      <div class="pdot" style="background:${podColor(p.pod)}"></div>
+      <div class="pb">
+        <div class="pn">${p.name}</div>
+        <div class="pa">${p.addr.replace(', Alberta','').replace(', Saskatchewan','').replace(', Canada','')}</div>
+        <div class="ptags">
+          <span class="tg t-pod" style="background:${podColor(p.pod)}cc;color:white">${podName(p.pod)}</span>
+          <span class="tg t-type">${p.type}</span>
+          ${p.vacant>0?`<span class="tg t-vac">${p.vacant} vacant</span>`:''}
+        </div>
+      </div>
+      <div class="chk"></div>
+    </div>`).join('');
+}
+
+// ── Tour Logic ────────────────────────────────────────────────────────────────
+function toggleTour(id){
+  tour=tour.includes(id)?tour.filter(x=>x!==id):[...tour,id];
+  PROPS.forEach(p=>refreshIcon(p));
+  renderList();renderTourPanel();scheduleRoute();
+}
+function removeTourStop(id){
+  tour=tour.filter(x=>x!==id);
+  PROPS.forEach(p=>refreshIcon(p));
+  renderList();renderTourPanel();scheduleRoute();
+}
+function scheduleRoute(){
+  clearTimeout(routeDebounce);
+  routeDebounce=setTimeout(fetchRoute,700);
+}
+async function fetchRoute(){
+  if(routeLayer){map.removeLayer(routeLayer);routeLayer=null;}
+  const stops=tour.map(id=>PROPS.find(p=>p.id===id)).filter(p=>p&&p.lat&&p.lng);
+  if(stops.length<2){renderTourLegs([]);return;}
+  const coords=stops.map(p=>`${p.lng},${p.lat}`).join(';');
+  try{
+    const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
+    const d=await r.json();
+    if(d.code==='Ok'&&d.routes[0]){
+      routeLayer=L.geoJSON(d.routes[0].geometry,{style:{color:'#dc2626',weight:3,opacity:.7,dashArray:'6,4'}}).addTo(map);
+      await fetchLegTimes(stops);
+    }
+  }catch(e){
+    renderTourLegs(stops.map((s,i)=>{
+      if(!i) return null;
+      const km=haversine(stops[i-1],s);
+      return{km:Math.round(km*10)/10,mins:Math.round(km/0.55)};
+    }).filter(Boolean));
+  }
+}
+async function fetchLegTimes(stops){
+  const coords=stops.map(p=>`${p.lng},${p.lat}`).join(';');
+  try{
+    const r=await fetch(`https://router.project-osrm.org/table/v1/driving/${coords}?annotations=duration,distance`);
+    const d=await r.json();
+    if(d.code==='Ok'){
+      const legs=[];
+      for(let i=0;i<stops.length-1;i++){
+        legs.push({km:Math.round(d.distances[i][i+1]/100)/10,mins:Math.round(d.durations[i][i+1]/60)});
+      }
+      renderTourLegs(legs);
+    }
+  }catch(e){}
+}
+function haversine(a,b){
+  const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;
+  const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+function renderTourLegs(legs){lastLegs=legs||[];renderTourStops(lastLegs);}
+function renderTourPanel(){
+  document.getElementById('tour-badge').textContent=`${tour.length} stop${tour.length!==1?'s':''}`;
+  if(!tour.length){
+    document.getElementById('tour-empty').style.display='block';
+    document.getElementById('tour-stops').innerHTML='';
+    document.getElementById('tour-footer').style.display='none';
+    document.getElementById('feasibility').textContent='';
+    document.getElementById('feasibility').className='';
+    return;
+  }
+  document.getElementById('tour-empty').style.display='none';
+  renderTourStops(lastLegs);
+}
+function renderTourStops(legs){
+  if(!tour.length) return;
+  document.getElementById('tour-stops').innerHTML=tour.map((id,i)=>{
+    const p=PROPS.find(x=>x.id===id); if(!p) return '';
+    const leg=legs[i-1];
+    const legHtml=i>0?`<div class="sleg ${leg&&leg.mins>30?'long':''}">${leg?`${leg.mins} min · ${leg.km} km`:'Calculating…'}</div>`:'';
+    return `<div class="sr"><div class="sn">${i+1}</div><div class="sb"><div class="sname">${p.name}</div>${legHtml}</div><div class="srm" onclick="removeTourStop(${id})">×</div></div>`;
+  }).join('');
+  const totalDrive=legs.reduce((s,l)=>s+(l.mins||0),0);
+  const maxLeg=legs.length?Math.max(...legs.map(l=>l.mins||0)):0;
+  const totalMin=totalDrive+tour.length*45;
+  const h=Math.floor(totalMin/60),m=totalMin%60;
+  const dc=totalDrive>150?'cr':totalDrive>90?'cy':'cg';
+  const mc=maxLeg>40?'cr':maxLeg>25?'cy':'cg';
+  document.getElementById('tour-footer').style.display='flex';
+  document.getElementById('tour-footer').innerHTML=`
+    <div class="stat"><div class="sv ${dc}">${totalDrive>0?totalDrive+'m':'—'}</div><div class="sl">Drive</div></div>
+    <div class="stat"><div class="sv ${mc}">${maxLeg>0?maxLeg+'m':'—'}</div><div class="sl">Longest</div></div>
+    <div class="stat"><div class="sv cb">${totalDrive>0?h+'h '+m+'m':'—'}</div><div class="sl">Full Day</div></div>
+    <div class="stat"><div class="sv cb">${tour.length}</div><div class="sl">Stops</div></div>`;
+  const fEl=document.getElementById('feasibility');
+  if(tour.length<2||totalDrive===0){fEl.textContent='';fEl.className='';}
+  else if(totalDrive>150||maxLeg>40){fEl.textContent='⚠ Over capacity — too much drive time';fEl.className='fr';}
+  else if(totalDrive>90||maxLeg>25){fEl.textContent='⚡ Tight but doable — allow buffer time';fEl.className='fy';}
+  else{fEl.textContent='✓ Feasible day — efficient coverage';fEl.className='fg';}
+  const pts=tour.map(id=>PROPS.find(p=>p.id===id)).filter(p=>p&&p.lat&&p.lng);
+  if(pts.length>=2) map.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lng])),{padding:[40,40]});
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('.fb').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    if(btn.dataset.vac){
+      vacantOnly=!vacantOnly;
+      btn.classList.toggle('active',vacantOnly);
+    } else {
+      document.querySelectorAll('.fb:not([data-vac])').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentCity=btn.dataset.city;
+      if(currentCity==='Edmonton') map.flyTo([53.5461,-113.4938],11,{duration:.8});
+      else if(currentCity==='Calgary') map.flyTo([51.0447,-114.0719],11,{duration:.8});
+      else if(currentCity==='all') map.flyTo([53.5461,-113.4938],9,{duration:.8});
+    }
+    renderList();
+  });
+});
+document.getElementById('srch').addEventListener('input',renderList);
+
+// ── Map Legend ────────────────────────────────────────────────────────────────
+const legend=L.control({position:'bottomleft'});
+legend.onAdd=()=>{
+  const div=L.DomUtil.create('div');
+  div.style.cssText='background:#1f2937;border:1px solid #374151;padding:8px 10px;border-radius:7px;font-size:10px;color:#e5e7eb;line-height:1.9;box-shadow:0 2px 8px rgba(0,0,0,.4)';
+  div.innerHTML='<div style="font-weight:700;margin-bottom:4px;color:#9ca3af;letter-spacing:.04em">LEASING PODS</div>'+
+    PODS.filter(p=>p.id<8).map(p=>{
+      const mems=PROPS.filter(x=>x.pod===p.id);
+      const vac=mems.reduce((s,x)=>s+x.vacant,0);
+      return `<div style="cursor:pointer" onclick="flyToPod(${p.id})"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:5px;vertical-align:middle"></span>${p.name} <span style="color:#6b7280">(${mems.length})</span>${vac>0?` <span style="color:#f87171;font-size:9px">${vac}v</span>`:''}</div>`;
+    }).join('');
+  return div;
+};
+legend.addTo(map);
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+drawPods();
+PROPS.forEach(p=>initMarker(p));
+renderList();
+renderPodList();
+</script>
+</body>
+</html>
