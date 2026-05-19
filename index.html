@@ -287,6 +287,9 @@ const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navi
 const podColor=id=>{const p=PODS.find(x=>x.id===id);return p?p.color:'#64748b';};
 const podName=id=>{const p=PODS.find(x=>x.id===id);return p?p.name:`Pod ${id}`;};
 
+// ── Metro groupings ──────────────────────────────────────────────────────────
+const EDM_METRO=['Edmonton','Sherwood Park','St. Albert'];
+const CAL_METRO=['Calgary','Okotoks','Cochrane'];
 // ── Portfolio stats ───────────────────────────────────────────────────────────
 function updateStats(){
   const totalVac=PROPS.reduce((s,p)=>s+p.vacant,0);
@@ -445,7 +448,7 @@ function renderList(){
   const srch=document.getElementById('srch').value.toLowerCase();
   const sort=document.getElementById('sort-select').value;
   let filtered=PROPS.filter(p=>{
-    const cok=currentCity==='all'||(currentCity==='other'?(p.city!=='Edmonton'&&p.city!=='Calgary'):p.city===currentCity);
+    const cok=currentCity==='all'||(currentCity==='Edmonton'?EDM_METRO.includes(p.city):currentCity==='Calgary'?CAL_METRO.includes(p.city):currentCity==='other'?(!EDM_METRO.includes(p.city)&&!CAL_METRO.includes(p.city)):p.city===currentCity);
     return cok&&(!vacantOnly||p.vacant>0)&&(!srch||p.name.toLowerCase().includes(srch)||p.addr.toLowerCase().includes(srch));
   });
   if(sort==='vac')filtered.sort((a,b)=>b.vacant-a.vacant||b.units-a.units);
