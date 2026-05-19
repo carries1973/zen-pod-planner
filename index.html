@@ -2,161 +2,236 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZEN Residential — Pod Planner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ZEN Leasing — Route Planner</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;height:100vh;overflow:hidden;background:#111827;color:#e5e7eb}
-#sidebar{width:360px;min-width:360px;display:flex;flex-direction:column;background:#1f2937;border-right:1px solid #374151}
-#hdr{padding:12px 14px 8px;background:#111827;border-bottom:1px solid #374151}
-#hdr h1{font-size:13px;font-weight:700;color:#f9fafb;margin-bottom:2px}
-#hdr .sub{font-size:10px;color:#6b7280}
-#tabs{display:flex;border-bottom:1px solid #374151}
-.tab{flex:1;padding:7px 0;font-size:11px;font-weight:600;text-align:center;cursor:pointer;color:#6b7280;border-bottom:2px solid transparent;transition:all .15s}
-.tab.active{color:#f9fafb;border-bottom-color:#3b82f6}
-#panel-props,#panel-pods,#panel-crime{display:flex;flex-direction:column;flex:1;overflow:hidden}
-#filters{padding:7px 10px;border-bottom:1px solid #374151;display:flex;gap:4px;flex-wrap:wrap}
-.fb{padding:3px 8px;border-radius:12px;border:1px solid #374151;background:transparent;color:#9ca3af;font-size:10px;cursor:pointer;transition:all .15s;white-space:nowrap}
-.fb.active{background:#2563eb;border-color:#2563eb;color:white;font-weight:600}
-.fb:hover:not(.active){border-color:#6b7280;color:#e5e7eb}
-.fb.red-pill{border-color:#7f1d1d;color:#fca5a5}
-.fb.red-pill.active{background:#dc2626;border-color:#dc2626;color:white}
-#srch-wrap{padding:6px 10px;border-bottom:1px solid #374151}
-#srch{width:100%;padding:5px 9px;background:#111827;border:1px solid #374151;border-radius:5px;color:#e5e7eb;font-size:11px;outline:none}
-#srch::placeholder{color:#4b5563}
-#srch:focus{border-color:#2563eb}
-#prop-list{flex:1;overflow-y:auto}
-.pi{padding:7px 10px;cursor:pointer;border-bottom:1px solid #111827;display:flex;align-items:flex-start;gap:8px;user-select:none;transition:background .1s}
-.pi:hover{background:#2d3748}
-.pi.in-tour{background:#0d2d1a;border-left:3px solid #10b981;padding-left:7px}
+:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#f1f5f9;--muted:#64748b;--blue:#3b82f6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--purple:#8b5cf6}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;height:100vh;overflow:hidden;background:var(--bg);color:var(--text)}
+/* ── Sidebar ── */
+#sidebar{width:380px;min-width:380px;display:flex;flex-direction:column;background:var(--card);border-right:1px solid var(--border);overflow:hidden}
+#hdr{padding:12px 16px 10px;background:var(--bg);border-bottom:1px solid var(--border)}
+#hdr-top{display:flex;justify-content:space-between;align-items:flex-start}
+#hdr h1{font-size:14px;font-weight:800;color:var(--text);letter-spacing:-.02em}
+#hdr .sub{font-size:10px;color:var(--muted);margin-top:2px}
+#portfolio-stats{display:flex;gap:12px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.pstat{flex:1;text-align:center}
+.pstat-val{font-size:18px;font-weight:800;color:var(--blue);line-height:1}
+.pstat-val.green{color:var(--green)}
+.pstat-val.yellow{color:var(--yellow)}
+.pstat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+/* ── Tabs ── */
+#tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg)}
+.tab{flex:1;padding:9px 0;font-size:11px;font-weight:600;text-align:center;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(--text);border-bottom-color:var(--blue)}
+/* ── Panels ── */
+#panel-route,#panel-pods,#panel-crime{display:flex;flex-direction:column;flex:1;overflow:hidden}
+/* ── Route Panel ── */
+#route-inner{flex:1;overflow-y:auto;padding:0}
+/* Commission bar */
+#commission-bar{padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+#commission-bar label{font-size:10px;color:var(--muted);white-space:nowrap}
+#commission-input{width:80px;padding:4px 7px;background:var(--card);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;font-weight:600;outline:none}
+#commission-input:focus{border-color:var(--blue)}
+#comm-unit{font-size:10px;color:var(--muted)}
+/* Search + filter */
+#route-filters{padding:7px 10px;border-bottom:1px solid var(--border);display:flex;gap:4px;flex-wrap:wrap}
+.fb{padding:3px 9px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.fb.active{background:var(--blue);border-color:var(--blue);color:white;font-weight:600}
+.fb:hover:not(.active){border-color:#94a3b8;color:var(--text)}
+.fb.vac-pill{border-color:#4c1d3d;color:#f472b6}
+.fb.vac-pill.active{background:#9d174d;border-color:#9d174d;color:white}
+#srch-wrap{padding:6px 10px;border-bottom:1px solid var(--border)}
+#srch{width:100%;padding:5px 9px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;outline:none}
+#srch:focus{border-color:var(--blue)}
+/* Property rows */
+#prop-list{overflow-y:auto;flex:1}
+.pi{padding:8px 12px;cursor:pointer;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:9px;user-select:none;transition:background .1s}
+.pi:hover{background:#263548}
+.pi.in-tour{background:#0f2d1f;border-left:3px solid var(--green);padding-left:9px}
 .pi.in-tour .pn{color:#34d399}
-.chk{width:12px;height:12px;border:2px solid #4b5563;border-radius:2px;flex-shrink:0;margin-top:3px;position:relative}
-.pi.in-tour .chk{background:#10b981;border-color:#10b981}
-.pi.in-tour .chk::after{content:'✓';position:absolute;top:-4px;left:-1px;font-size:10px;color:white;font-weight:800}
+.chk{width:14px;height:14px;border:2px solid #475569;border-radius:3px;flex-shrink:0;position:relative;transition:all .15s}
+.pi.in-tour .chk{background:var(--green);border-color:var(--green)}
+.pi.in-tour .chk::after{content:'✓';position:absolute;top:-3px;left:0;font-size:10px;color:white;font-weight:800}
 .pb{flex:1;min-width:0}
-.pn{font-size:11px;font-weight:600;color:#d1d5db;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pa{font-size:9px;color:#6b7280;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ptags{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap}
-.tg{padding:1px 4px;border-radius:2px;font-size:8px;font-weight:600}
+.pn{font-size:11px;font-weight:600;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pa{font-size:9px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ptags{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap;align-items:center}
+.tg{padding:1px 5px;border-radius:3px;font-size:8px;font-weight:700}
 .t-pod{color:white}
-.t-vac{background:#450a0a;color:#f87171}
-.pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;border:1px solid rgba(255,255,255,.3)}
-#pod-list,#crime-panel-inner{flex:1;overflow-y:auto;padding:6px 0}
-.pod-row{padding:7px 12px;border-bottom:1px solid #111827;display:flex;align-items:center;gap:9px;cursor:pointer;transition:background .1s}
-.pod-row:hover{background:#2d3748}
-.pod-swatch{width:11px;height:11px;border-radius:50%;flex-shrink:0}
-.pod-body{flex:1}
-.pod-name{font-size:11px;font-weight:700;color:#f9fafb;margin-bottom:1px}
-.pod-stats{font-size:9px;color:#6b7280}
-.pod-vac{font-weight:700}
-.pod-toggle{font-size:9px;color:#4b5563;cursor:pointer;padding:2px 6px;border:1px solid #374151;border-radius:3px;flex-shrink:0}
-.pod-toggle.on{color:#10b981;border-color:#10b981}
-.crime-ctrl{padding:10px 12px;border-bottom:1px solid #374151}
-.crime-ctrl h4{font-size:11px;font-weight:700;color:#f9fafb;margin-bottom:6px}
-.crime-toggle-row{display:flex;gap:6px;margin-bottom:8px}
-.ctog{flex:1;padding:5px;border-radius:5px;border:1px solid #374151;background:transparent;color:#9ca3af;font-size:10px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
-.ctog.active{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd}
-.ctog.violent.active{background:#3d0f0f;border-color:#dc2626;color:#fca5a5}
-.crime-legend{padding:8px 12px;background:#111827;border-top:1px solid #374151}
-.crime-legend h5{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
-.legend-scale{display:flex;border-radius:3px;overflow:hidden;height:12px;margin-bottom:4px}
-.legend-scale div{flex:1}
-.legend-labels{display:flex;justify-content:space-between;font-size:9px;color:#6b7280}
-.crime-note{padding:6px 12px;font-size:9px;color:#4b5563;border-top:1px solid #374151;line-height:1.5}
-/* Tour panel */
-#tour-panel{background:#111827;border-top:2px solid #1d4ed8;flex-shrink:0}
-#tour-hdr{padding:7px 10px;background:#1d4ed8;display:flex;justify-content:space-between;align-items:center}
-#tour-hdr h3{font-size:11px;font-weight:700;color:white}
-#tour-badge{background:rgba(0,0,0,.25);padding:1px 7px;border-radius:10px;font-size:10px;color:white}
+.t-vac{background:#4c0519;color:#fda4af;font-size:9px;font-weight:800}
+.t-units{background:#1e3a5f;color:#93c5fd}
+.pdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,.2)}
+/* Vacancy highlight */
+.pi.has-vac .pn{color:white}
+.pi.has-vac{background:#1a0a0f}
+.pi.has-vac:hover{background:#2a1020}
+.pi.has-vac.in-tour{background:#0f2d1f}
+/* ── Tour Panel (bottom) ── */
+#tour-panel{background:var(--bg);border-top:2px solid var(--blue);flex-shrink:0;max-height:55vh}
+#tour-hdr{padding:8px 12px;background:linear-gradient(135deg,#1d4ed8,#2563eb);display:flex;justify-content:space-between;align-items:center}
+#tour-hdr h3{font-size:12px;font-weight:800;color:white;letter-spacing:-.01em}
+#tour-meta{display:flex;gap:8px;align-items:center}
+#tour-badge{background:rgba(0,0,0,.3);padding:1px 8px;border-radius:10px;font-size:10px;color:white;font-weight:700}
+#clear-tour{font-size:9px;color:rgba(255,255,255,.6);cursor:pointer;padding:2px 6px;border:1px solid rgba(255,255,255,.2);border-radius:4px}
+#clear-tour:hover{color:white;border-color:rgba(255,255,255,.5)}
 #tour-stops-wrap{max-height:130px;overflow-y:auto}
-#tour-empty{padding:12px;text-align:center;color:#4b5563;font-size:11px}
-.sr{padding:6px 10px;border-bottom:1px solid #1f2937;display:flex;align-items:flex-start;gap:7px}
-.sn{width:18px;height:18px;border-radius:50%;background:#1d4ed8;color:white;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+#tour-empty{padding:14px;text-align:center;color:var(--muted);font-size:11px;line-height:1.5}
+.sr{padding:6px 12px;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:8px}
+.sn{width:20px;height:20px;border-radius:50%;background:#1d4ed8;color:white;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .sb{flex:1;min-width:0}
-.sname{font-size:10px;font-weight:600;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sleg{font-size:9px;color:#f59e0b;margin-top:1px}
-.sleg.long{color:#f87171}
-.srm{color:#4b5563;cursor:pointer;font-size:14px;padding:0 2px;line-height:1.4;flex-shrink:0}
-.srm:hover{color:#dc2626}
-#tour-footer{padding:7px 10px;background:#0d1117;display:flex;justify-content:space-around;border-top:1px solid #1f2937}
-.stat{text-align:center}.sv{font-size:15px;font-weight:700}.sl{font-size:8px;color:#4b5563;text-transform:uppercase;margin-top:1px}
-.cg{color:#10b981}.cy{color:#f59e0b}.cr{color:#ef4444}.cb{color:#60a5fa}
-#feasibility{padding:4px 10px;font-size:10px;font-weight:600;text-align:center;border-top:1px solid #1f2937}
+.sname{font-size:10px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sleg{font-size:9px;color:var(--yellow);margin-top:1px}
+.sleg.long{color:var(--red)}
+.svac{font-size:9px;color:#fda4af;font-weight:700}
+.srm{color:#475569;cursor:pointer;font-size:16px;padding:0 3px;line-height:1.4;flex-shrink:0}
+.srm:hover{color:var(--red)}
+/* Tour stats */
+#tour-stats{padding:8px 12px;background:#0a1929;display:flex;justify-content:space-around;border-top:1px solid var(--border);flex-shrink:0}
+.stat{text-align:center}
+.sv{font-size:16px;font-weight:800;line-height:1}
+.sl{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.cg{color:var(--green)}.cy{color:var(--yellow)}.cr{color:var(--red)}.cb{color:var(--blue)}.cp{color:var(--purple)}
+#feasibility{padding:4px 12px;font-size:10px;font-weight:700;text-align:center;flex-shrink:0}
 .fg{background:#052e16;color:#34d399}.fy{background:#422006;color:#fbbf24}.fr{background:#450a0a;color:#f87171}
 /* Navigation buttons */
-#nav-buttons{padding:7px 10px;display:flex;gap:6px;border-top:1px solid #374151;flex-wrap:wrap}
-.nav-btn{flex:1;min-width:0;padding:7px 6px;border-radius:6px;border:none;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .15s;white-space:nowrap}
-.nav-btn svg{flex-shrink:0}
-.nav-gmaps{background:#1a73e8;color:white}
-.nav-gmaps:hover{background:#1557b0}
-.nav-apple{background:#1c1c1e;color:white;border:1px solid #374151}
+#nav-buttons{padding:8px 12px;display:flex;gap:6px;border-top:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.nav-btn{flex:1;min-width:120px;padding:9px 8px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .15s}
+.nav-gmaps{background:#1a73e8;color:white;box-shadow:0 2px 8px rgba(26,115,232,.4)}
+.nav-gmaps:hover{background:#1557b0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(26,115,232,.5)}
+.nav-apple{background:#1c1c1e;color:white;border:1px solid #3a3a3c}
 .nav-apple:hover{background:#2c2c2e}
-.nav-copy{background:#374151;color:#e5e7eb}
+.nav-copy{background:#334155;color:#e2e8f0}
 .nav-copy.copied{background:#065f46;color:#34d399}
-.nav-copy:hover:not(.copied){background:#4b5563}
-/* Popup nav */
-.ppnav{display:flex;gap:5px;margin-top:6px}
-.ppnavbtn{flex:1;padding:6px 4px;border-radius:5px;border:none;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;text-decoration:none;transition:all .15s}
+.nav-copy:hover:not(.copied){background:#475569}
+/* Pods panel */
+#pod-list{flex:1;overflow-y:auto}
+.pod-card{margin:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);overflow:hidden;transition:all .15s}
+.pod-card:hover{border-color:#475569}
+.pod-hdr{padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.pod-swatch{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.pod-body{flex:1}
+.pod-name{font-size:12px;font-weight:700;color:var(--text)}
+.pod-sub{font-size:9px;color:var(--muted);margin-top:1px}
+.pod-vac-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:#4c0519;color:#fda4af;flex-shrink:0}
+.pod-vac-badge.none{background:#1e293b;color:var(--muted)}
+.pod-actions{display:flex;gap:6px;padding:0 12px 10px}
+.pod-act-btn{flex:1;padding:7px;border-radius:6px;border:none;font-size:10px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s}
+.pod-route-btn{background:var(--blue);color:white}
+.pod-route-btn:hover{background:#2563eb}
+.pod-toggle-btn{background:var(--border);color:var(--text)}
+.pod-toggle-btn:hover{background:#475569}
+.pod-toggle-btn.off{color:var(--muted)}
+.pod-prop-list{padding:4px 12px 8px;border-top:1px solid var(--border);max-height:120px;overflow-y:auto}
+.pod-prop-item{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:10px;color:#94a3b8;border-bottom:1px solid #1e293b;cursor:pointer}
+.pod-prop-item:last-child{border:none}
+.pod-prop-item:hover{color:var(--text)}
+.pod-prop-vac{color:#fda4af;font-weight:700}
+/* Crime panel */
+.crime-ctrl{padding:10px 14px;border-bottom:1px solid var(--border)}
+.crime-ctrl h4{font-size:11px;font-weight:700;color:var(--text);margin-bottom:7px}
+.crime-toggle-row{display:flex;gap:6px;margin-bottom:8px}
+.ctog{flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s}
+.ctog.active{background:#1e3a5f;border-color:var(--blue);color:#93c5fd}
+.ctog.violent.active{background:#3d0f0f;border-color:var(--red);color:#fca5a5}
+.crime-legend{padding:8px 14px;background:var(--bg);border-top:1px solid var(--border)}
+.crime-legend h5{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.legend-scale{display:flex;border-radius:3px;overflow:hidden;height:10px;margin-bottom:4px}
+.legend-scale div{flex:1}
+.legend-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--muted)}
+.crime-note{padding:7px 14px;font-size:9px;color:#475569;border-top:1px solid var(--border);line-height:1.5}
+/* Popup */
+#map{flex:1}
+.leaflet-popup-content-wrapper{background:#1e293b;color:var(--text);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,.6)}
+.leaflet-popup-tip{background:#1e293b}
+.leaflet-popup-content{margin:12px 14px;font-size:11px;line-height:1.6;min-width:210px}
+.ppname{font-weight:800;font-size:13px;color:white;margin-bottom:2px}
+.ppaddr{color:#94a3b8;font-size:10px}
+.ppunits{font-size:10px;color:var(--muted);margin-bottom:6px}
+.pptags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.ppvac{background:#4c0519;color:#fda4af;padding:3px 8px;border-radius:5px;font-weight:800;font-size:11px;display:inline-block;margin-bottom:6px}
+.ppnav{display:flex;gap:5px;margin-top:0}
+.ppnavbtn{flex:1;padding:8px 4px;border-radius:6px;border:none;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;text-decoration:none;transition:all .15s;min-height:34px}
 .ppnavbtn-g{background:#1a73e8;color:white}
 .ppnavbtn-g:hover{background:#1557b0}
 .ppnavbtn-a{background:#1c1c1e;color:white;border:1px solid #555}
-.ppnavbtn-a:hover{background:#2c2c2e}
-.ppnavbtn-add{background:#2563eb;color:white}
-.ppnavbtn-add:hover{background:#1d4ed8}
-.ppnavbtn-add.added{background:#10b981}
-.ppnavbtn-add.added:hover{background:#059669}
+.ppnavbtn-add{background:#1d4ed8;color:white}
+.ppnavbtn-add:hover{background:#1e40af}
+.ppnavbtn-add.added{background:var(--green)}
 /* Toast */
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1f2937;border:1px solid #374151;color:#f9fafb;padding:8px 18px;border-radius:20px;font-size:11px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.5);transition:opacity .3s;opacity:0;pointer-events:none;z-index:9999;white-space:nowrap}
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid var(--border);color:var(--text);padding:9px 20px;border-radius:20px;font-size:11px;font-weight:600;box-shadow:0 4px 24px rgba(0,0,0,.6);transition:opacity .3s;opacity:0;pointer-events:none;z-index:9999}
 #toast.show{opacity:1}
-#map{flex:1}
-.leaflet-popup-content-wrapper{background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.5)}
-.leaflet-popup-tip{background:#1f2937}
-.leaflet-popup-content{margin:10px 13px;font-size:11px;line-height:1.6;min-width:200px}
-.ppname{font-weight:700;font-size:12px;color:#f9fafb;margin-bottom:2px}
-.ppaddr{color:#9ca3af;font-size:10px}
-.ppunits{font-size:10px;color:#6b7280;margin-bottom:5px}
-.pptags{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:7px}
-::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#374151;border-radius:2px}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
 </style>
 </head>
 <body>
 <div id="sidebar">
   <div id="hdr">
-    <h1>ZEN Residential — Pod Planner</h1>
-    <div class="sub">82 properties · 6,284 units · Edmonton · Calgary · Saskatoon · Regina</div>
+    <div id="hdr-top">
+      <div>
+        <h1>ZEN Residential — Leasing Route Planner</h1>
+        <div class="sub">82 properties · 6,284 units · Edmonton · Calgary · Saskatoon · Regina</div>
+      </div>
+    </div>
+    <div id="portfolio-stats">
+      <div class="pstat"><div class="pstat-val" id="stat-props">82</div><div class="pstat-lbl">Properties</div></div>
+      <div class="pstat"><div class="pstat-val green" id="stat-vac">—</div><div class="pstat-lbl">Vacant Now</div></div>
+      <div class="pstat"><div class="pstat-val yellow" id="stat-units">6,284</div><div class="pstat-lbl">Total Units</div></div>
+      <div class="pstat"><div class="pstat-val cp" id="stat-earn">—</div><div class="pstat-lbl">Est. Earnings</div></div>
+    </div>
   </div>
   <div id="tabs">
-    <div class="tab active" id="tab-props" onclick="switchTab('props')">Properties</div>
-    <div class="tab" id="tab-pods" onclick="switchTab('pods')">Pods</div>
-    <div class="tab" id="tab-crime" onclick="switchTab('crime')">Crime Map</div>
+    <div class="tab active" id="tab-route" onclick="switchTab('route')">🗓 Route</div>
+    <div class="tab" id="tab-pods" onclick="switchTab('pods')">📍 Pods</div>
+    <div class="tab" id="tab-crime" onclick="switchTab('crime')">🔴 Crime</div>
   </div>
-  <div id="panel-props">
-    <div id="filters">
+
+  <!-- ROUTE TAB -->
+  <div id="panel-route">
+    <div id="commission-bar">
+      <label>Commission per lease:</label>
+      <span style="color:var(--muted);font-size:11px">$</span>
+      <input id="commission-input" type="number" value="500" min="0" step="50" oninput="updateStats()"/>
+      <span id="comm-unit">/lease</span>
+      <div style="flex:1"></div>
+      <select id="sort-select" style="background:var(--card);border:1px solid var(--border);color:var(--text);font-size:10px;padding:3px 6px;border-radius:5px;outline:none" onchange="renderList()">
+        <option value="vac">Vacancy ↓</option>
+        <option value="units">Units ↓</option>
+        <option value="name">A–Z</option>
+      </select>
+    </div>
+    <div id="route-filters">
       <button class="fb active" data-city="all">All</button>
       <button class="fb" data-city="Edmonton">Edmonton</button>
       <button class="fb" data-city="Calgary">Calgary</button>
       <button class="fb" data-city="other">Other</button>
-      <button class="fb red-pill" data-vac="true">Vacant Now</button>
+      <button class="fb vac-pill" data-vac="true">Vacant Only</button>
     </div>
-    <div id="srch-wrap"><input id="srch" type="text" placeholder="Search name or address…"/></div>
+    <div id="srch-wrap"><input id="srch" type="text" placeholder="Search property…"/></div>
     <div id="prop-list"></div>
   </div>
-  <div id="panel-pods" style="display:none"><div id="pod-list"></div></div>
+
+  <!-- PODS TAB -->
+  <div id="panel-pods" style="display:none">
+    <div id="pod-list"></div>
+  </div>
+
+  <!-- CRIME TAB -->
   <div id="panel-crime" style="display:none">
     <div class="crime-ctrl">
       <h4>Crime Overlay</h4>
       <div class="crime-toggle-row">
-        <div class="ctog active" id="ctog-total" onclick="setCrimeMode('total')">Total Crime</div>
-        <div class="ctog violent" id="ctog-violent" onclick="setCrimeMode('violent')">Violent Only</div>
+        <div class="ctog active" id="ctog-total" onclick="setCrimeMode('total')">Total</div>
+        <div class="ctog violent" id="ctog-violent" onclick="setCrimeMode('violent')">Violent</div>
         <div class="ctog" id="ctog-off" onclick="setCrimeMode('off')">Hide</div>
       </div>
-      <div style="font-size:10px;color:#6b7280">Hover any neighbourhood for stats.</div>
+      <div style="font-size:10px;color:var(--muted)">Hover a neighbourhood to see incident counts.</div>
     </div>
     <div class="crime-legend">
-      <h5>Incident Rate (relative to city)</h5>
+      <h5>Crime Density (relative to city average)</h5>
       <div class="legend-scale">
         <div style="background:#4ade80"></div><div style="background:#a3e635"></div>
         <div style="background:#facc15"></div><div style="background:#f97316"></div>
@@ -165,42 +240,47 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:
       <div class="legend-labels"><span>Low</span><span>Medium</span><span>High</span></div>
     </div>
     <div class="crime-note">
-      <strong>Edmonton:</strong> EPS 30-day incidents (79K events).<br>
-      <strong>Calgary:</strong> CPS 2024 annual incidents by community.
+      <strong>Edmonton:</strong> EPS 30-day rolling incidents (79K events).<br>
+      <strong>Calgary:</strong> CPS 2024 annual by community.<br>
+      Use this layer to advise prospects on neighbourhood safety.
     </div>
   </div>
+
+  <!-- TOUR PANEL -->
   <div id="tour-panel">
-    <div id="tour-hdr"><h3>🗓 Tour Day Planner</h3><span id="tour-badge">0 stops</span></div>
+    <div id="tour-hdr">
+      <h3>📍 Today's Route</h3>
+      <div id="tour-meta">
+        <span id="tour-badge">0 stops</span>
+        <span id="clear-tour" onclick="clearTour()" style="display:none">Clear all</span>
+      </div>
+    </div>
     <div id="tour-stops-wrap">
-      <div id="tour-empty">Click any property to add it to your route</div>
+      <div id="tour-empty">Select a pod to auto-route, or tap properties to build manually</div>
       <div id="tour-stops"></div>
     </div>
-    <div id="tour-footer" style="display:none"></div>
+    <div id="tour-stats" style="display:none"></div>
     <div id="feasibility"></div>
     <div id="nav-buttons" style="display:none">
       <button class="nav-btn nav-gmaps" onclick="openGoogleMaps()">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        Open in Google Maps
-      </button>
-      <button class="nav-btn nav-apple" onclick="openAppleMaps()" id="apple-btn" style="display:none">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
-        Apple Maps
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        Open Route in Google Maps
       </button>
       <button class="nav-btn nav-copy" id="copy-btn" onclick="copyRouteLink()">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
         Copy Link
       </button>
     </div>
   </div>
 </div>
+
 <div id="map"></div>
 <div id="toast"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
-// ── Data ──────────────────────────────────────────────────────────────────────
-const PROPS=[{"id":1,"name":"Mid City Manor","addr":"10250 118 Street, Edmonton","city":"Edmonton","units":20,"lat":53.54423,"lng":-113.525141,"vacant":0,"pod":0},{"id":2,"name":"Neu Manor","addr":"10330 113 Street, Edmonton","city":"Edmonton","units":5,"lat":53.499473,"lng":-113.524641,"vacant":0,"pod":2},{"id":3,"name":"The Manning","addr":"3611 145 Avenue, Edmonton","city":"Edmonton","units":23,"lat":53.60841,"lng":-113.39641,"vacant":0,"pod":4},{"id":4,"name":"The Residence","addr":"9730 106 Street, Edmonton","city":"Edmonton","units":59,"lat":53.534844,"lng":-113.503076,"vacant":0,"pod":0},{"id":5,"name":"Crestmark Place","addr":"10842 107 Street, Edmonton","city":"Edmonton","units":17,"lat":53.554401,"lng":-113.644018,"vacant":0,"pod":1},{"id":6,"name":"Kerry Manor","addr":"10210 118 Street, Edmonton","city":"Edmonton","units":22,"lat":53.543315,"lng":-113.52514,"vacant":0,"pod":0},{"id":7,"name":"Richard House","addr":"10220 118 Street, Edmonton","city":"Edmonton","units":22,"lat":53.543543,"lng":-113.52514,"vacant":0,"pod":0},{"id":8,"name":"Brighton Court","addr":"10525 156 Street, Edmonton","city":"Edmonton","units":78,"lat":53.548784,"lng":-113.589896,"vacant":0,"pod":1},{"id":9,"name":"Lorinda Court","addr":"10240 118 Street, Edmonton","city":"Edmonton","units":20,"lat":53.544001,"lng":-113.525141,"vacant":0,"pod":0},{"id":10,"name":"Rivers Edge","addr":"170 North Railway St, Okotoks","city":"Okotoks","units":24,"lat":50.722368,"lng":-113.960405,"vacant":0,"pod":11},{"id":11,"name":"Tuscany Villa","addr":"10644 109 Street, Edmonton","city":"Edmonton","units":18,"lat":53.550755,"lng":-113.508944,"vacant":0,"pod":0},{"id":12,"name":"Trails Edge","addr":"7301 4A Street SW, Okotoks","city":"Calgary","units":48,"lat":50.99089,"lng":-114.07402,"vacant":0,"pod":12},{"id":13,"name":"Rideau Place","addr":"10620 42 Avenue, Edmonton","city":"Edmonton","units":68,"lat":53.478903,"lng":-113.505702,"vacant":0,"pod":2},{"id":14,"name":"Autumn Manor","addr":"9132 149 Street, Edmonton","city":"Edmonton","units":24,"lat":53.525924,"lng":-113.578199,"vacant":0,"pod":1},{"id":15,"name":"Carina Apartments","addr":"9720 149 Street, Edmonton","city":"Edmonton","units":19,"lat":53.535311,"lng":-113.578535,"vacant":0,"pod":1},{"id":16,"name":"Danton Manor","addr":"14519 92 Street, Edmonton","city":"Edmonton","units":75,"lat":53.607472,"lng":-113.481438,"vacant":0,"pod":4},{"id":17,"name":"Jasmine Apartments","addr":"10515 70 Avenue, Edmonton","city":"Edmonton","units":18,"lat":53.506174,"lng":-113.50154,"vacant":0,"pod":2},{"id":18,"name":"Millcrest Apts","addr":"578 Millwoods Road S, Edmonton","city":"Edmonton","units":117,"lat":53.475527,"lng":-113.463266,"vacant":0,"pod":2},{"id":19,"name":"North Haven Estates","addr":"13672 38 Street, Edmonton","city":"Edmonton","units":104,"lat":53.597815,"lng":-113.399975,"vacant":0,"pod":4},{"id":20,"name":"Queensgate Manor","addr":"10610 87 Street, Edmonton","city":"Edmonton","units":34,"lat":53.549696,"lng":-113.452845,"vacant":0,"pod":0},{"id":21,"name":"Maple Leaf Court","addr":"14415 92 Street, Edmonton","city":"Edmonton","units":48,"lat":53.606639,"lng":-113.481875,"vacant":0,"pod":4},{"id":22,"name":"Monarch Manor","addr":"10654 114 Street, Edmonton","city":"Edmonton","units":20,"lat":53.551174,"lng":-113.518115,"vacant":0,"pod":0},{"id":23,"name":"Villa Grande","addr":"10005 154 Street, Edmonton","city":"Edmonton","units":23,"lat":53.539642,"lng":-113.58642,"vacant":0,"pod":1},{"id":24,"name":"Harmony at the Market","addr":"201 Festival Way, Sherwood Park","city":"Sherwood Park","units":80,"lat":53.527262,"lng":-113.297407,"vacant":0,"pod":9},{"id":25,"name":"Harmony Walker Lake A","addr":"241 Watt Common SW, Edmonton","city":"Edmonton","units":123,"lat":53.421279,"lng":-113.419319,"vacant":0,"pod":2},{"id":26,"name":"Harmony Walker Lake B","addr":"245 Watt Common SW, Edmonton","city":"Edmonton","units":55,"lat":53.421279,"lng":-113.419319,"vacant":0,"pod":2},{"id":27,"name":"Eleven","addr":"1055 11th Street SW, Calgary","city":"Calgary","units":369,"lat":51.043532,"lng":-114.089991,"vacant":0,"pod":6},{"id":28,"name":"The Loft","addr":"744 4th Avenue SW, Calgary","city":"Calgary","units":56,"lat":51.05005,"lng":-114.07825,"vacant":0,"pod":6},{"id":29,"name":"The Barracks","addr":"6855 Ad Astra Boulevard, Edmonton","city":"Edmonton","units":241,"lat":53.606978,"lng":-113.513635,"vacant":0,"pod":4},{"id":30,"name":"The Parks","addr":"10135 108 Street, Edmonton","city":"Edmonton","units":363,"lat":53.541795,"lng":-113.506472,"vacant":0,"pod":0},{"id":31,"name":"Glenmore Manor","addr":"10644 81 Avenue, Edmonton","city":"Edmonton","units":24,"lat":53.517134,"lng":-113.505656,"vacant":0,"pod":1},{"id":32,"name":"Vista on 78th","addr":"10820 78 Avenue, Edmonton","city":"Edmonton","units":27,"lat":53.514306,"lng":-113.51034,"vacant":0,"pod":1},{"id":33,"name":"Mission Flats","addr":"320 19 Avenue SW, Calgary","city":"Calgary","units":67,"lat":51.036496,"lng":-114.069739,"vacant":0,"pod":6},{"id":34,"name":"Park Centre","addr":"2014 Sherwood Drive, Sherwood Park","city":"Sherwood Park","units":177,"lat":53.570396,"lng":-113.295488,"vacant":0,"pod":9},{"id":35,"name":"Sky 1","addr":"181 Skyview Bay NE, Calgary","city":"Calgary","units":222,"lat":51.156488,"lng":-113.956866,"vacant":0,"pod":7},{"id":36,"name":"Sky 2","addr":"141 Skyview Bay NE, Calgary","city":"Calgary","units":146,"lat":51.156488,"lng":-113.956866,"vacant":0,"pod":7},{"id":37,"name":"Apple Apartments","addr":"14903 102 Avenue, Edmonton","city":"Edmonton","units":12,"lat":53.543091,"lng":-113.578565,"vacant":0,"pod":1},{"id":38,"name":"Gala Apartments","addr":"9638 156 Street, Edmonton","city":"Edmonton","units":24,"lat":53.534196,"lng":-113.590501,"vacant":0,"pod":1},{"id":39,"name":"Link95","addr":"9502 86 Street NW, Edmonton","city":"Edmonton","units":44,"lat":53.532043,"lng":-113.459639,"vacant":0,"pod":0},{"id":40,"name":"Chrysalis","addr":"10716 102 Street, Edmonton","city":"Edmonton","units":20,"lat":53.551844,"lng":-113.495675,"vacant":0,"pod":0},{"id":41,"name":"Jovie","addr":"235 Carrington Plaza NW, Calgary","city":"Calgary","units":182,"lat":51.182806,"lng":-114.092258,"vacant":0,"pod":7},{"id":42,"name":"Greenstone Park","addr":"11350 128 Street, Edmonton","city":"Edmonton","units":89,"lat":53.57012,"lng":-113.423404,"vacant":0,"pod":3},{"id":43,"name":"Woodridge Place","addr":"10139 158 Street, Edmonton","city":"Edmonton","units":54,"lat":53.619232,"lng":-113.498134,"vacant":0,"pod":1},{"id":44,"name":"Junction88","addr":"19111 Main Street SE, Calgary","city":"Calgary","units":88,"lat":50.876554,"lng":-113.952215,"vacant":0,"pod":8},{"id":45,"name":"Junction21","addr":"3870 Market Street SE, Calgary","city":"Calgary","units":21,"lat":50.879539,"lng":-113.956429,"vacant":0,"pod":8},{"id":46,"name":"The Maverick","addr":"6418 Laubman Street NW, Edmonton","city":"Edmonton","units":178,"lat":53.605343,"lng":-113.514441,"vacant":0,"pod":4},{"id":47,"name":"Linden Park","addr":"165 Element Drive, St. Albert","city":"St. Albert","units":57,"lat":53.678297,"lng":-113.6362,"vacant":0,"pod":10},{"id":48,"name":"Trailside Skyview Ranch","addr":"216 Skyview Ranch Road NE, Calgary","city":"Calgary","units":223,"lat":51.163779,"lng":-113.958303,"vacant":0,"pod":7},{"id":49,"name":"Sky 151","addr":"151 Skyview Bay NE, Calgary","city":"Calgary","units":124,"lat":51.156488,"lng":-113.956866,"vacant":0,"pod":7},{"id":50,"name":"The Aspen","addr":"6031 Currents Drive NW, Edmonton","city":"Edmonton","units":78,"lat":53.435616,"lng":-113.599285,"vacant":0,"pod":2},{"id":51,"name":"Kafa Manor","addr":"12717 119 Street NW, Edmonton","city":"Edmonton","units":8,"lat":53.585482,"lng":-113.526374,"vacant":0,"pod":4},{"id":52,"name":"Copper Manor","addr":"13011 83 Street NW, Edmonton","city":"Edmonton","units":6,"lat":53.589461,"lng":-113.468902,"vacant":0,"pod":4},{"id":53,"name":"Grandview Manor","addr":"11705 83 Street NW, Edmonton","city":"Edmonton","units":12,"lat":53.569016,"lng":-113.468628,"vacant":0,"pod":3},{"id":54,"name":"Cedar Manor","addr":"12040 82 Street NW, Edmonton","city":"Edmonton","units":18,"lat":53.574765,"lng":-113.530883,"vacant":0,"pod":3},{"id":55,"name":"Courts Manor","addr":"12239 82 Street NW, Edmonton","city":"Edmonton","units":17,"lat":53.577662,"lng":-113.46717,"vacant":0,"pod":3},{"id":56,"name":"Oakwood Manor","addr":"11348 97 Street NW, Edmonton","city":"Edmonton","units":11,"lat":53.564081,"lng":-113.492331,"vacant":0,"pod":0},{"id":57,"name":"Layali House","addr":"13710 64 Street NW, Edmonton","city":"Edmonton","units":17,"lat":53.600112,"lng":-113.440431,"vacant":0,"pod":3},{"id":58,"name":"Catalina Estates","addr":"5910 118 Avenue NW, Edmonton","city":"Edmonton","units":9,"lat":53.570463,"lng":-113.432665,"vacant":0,"pod":3},{"id":59,"name":"Sky Manor","addr":"9612 156 Street NW, Edmonton","city":"Edmonton","units":18,"lat":53.533472,"lng":-113.590506,"vacant":0,"pod":1},{"id":60,"name":"Chicklet House","addr":"10304 107 Avenue NW, Edmonton","city":"Edmonton","units":10,"lat":53.551507,"lng":-113.497645,"vacant":0,"pod":0},{"id":61,"name":"Hamlet Village","addr":"11647 124 Street NW, Edmonton","city":"Edmonton","units":8,"lat":53.568178,"lng":-113.535707,"vacant":0,"pod":3},{"id":62,"name":"Royal Lady","addr":"10746 102 Street NW, Edmonton","city":"Edmonton","units":39,"lat":53.552526,"lng":-113.495669,"vacant":0,"pod":0},{"id":63,"name":"Norwood Village","addr":"11332 95 Street, Edmonton","city":"Edmonton","units":154,"lat":53.563357,"lng":-113.487277,"vacant":0,"pod":0},{"id":64,"name":"Royal Manor","addr":"10215 108 Avenue NW, Edmonton","city":"Edmonton","units":12,"lat":53.552931,"lng":-113.496641,"vacant":0,"pod":0},{"id":65,"name":"Balwin Manor","addr":"6704 131A Avenue, Edmonton","city":"Edmonton","units":6,"lat":53.59132,"lng":-113.445443,"vacant":0,"pod":3},{"id":66,"name":"House Acadian","addr":"11535 124 Street NW, Edmonton","city":"Edmonton","units":21,"lat":53.566296,"lng":-113.533792,"vacant":0,"pod":3},{"id":67,"name":"Palisades","addr":"10825 113 Street NW, Edmonton","city":"Edmonton","units":15,"lat":53.553772,"lng":-113.515412,"vacant":0,"pod":0},{"id":68,"name":"Beverly Manor","addr":"11312 34 Street NW, Edmonton","city":"Edmonton","units":12,"lat":53.566292,"lng":-113.393839,"vacant":0,"pod":3},{"id":69,"name":"Douglas Manor","addr":"10757 83 Avenue, Edmonton","city":"Edmonton","units":57,"lat":53.518941,"lng":-113.508897,"vacant":0,"pod":1},{"id":70,"name":"Parkdale Terrace","addr":"8021 115 Avenue, Edmonton","city":"Edmonton","units":24,"lat":53.565701,"lng":-113.465196,"vacant":0,"pod":0},{"id":71,"name":"Riverview Pointe","addr":"25 Clydesdale Avenue, Cochrane","city":"Cochrane","units":209,"lat":51.201191,"lng":-114.501474,"vacant":0,"pod":13},{"id":72,"name":"Strathearn Place","addr":"9610 85 Street SW, Edmonton","city":"Edmonton","units":12,"lat":53.533679,"lng":-113.457597,"vacant":0,"pod":0},{"id":73,"name":"Rivergate","addr":"11040 82 Street NW, Edmonton","city":"Edmonton","units":9,"lat":53.55941,"lng":-113.467693,"vacant":0,"pod":0},{"id":74,"name":"Pioneer Apartments","addr":"12929 127 Street NW, Edmonton","city":"Edmonton","units":11,"lat":53.588527,"lng":-113.540841,"vacant":0,"pod":4},{"id":75,"name":"10126 154 Street","addr":"10126 154 Street NW, Edmonton","city":"Edmonton","units":6,"lat":53.54219,"lng":-113.587208,"vacant":0,"pod":1},{"id":76,"name":"Heights at River Vista","addr":"1320 Hermitage Road NW, Edmonton","city":"Edmonton","units":282,"lat":53.582996,"lng":-113.395753,"vacant":0,"pod":3},{"id":77,"name":"Legacy Place","addr":"150 Legacy Main Street SE, Calgary","city":"Calgary","units":310,"lat":50.860839,"lng":-114.017847,"vacant":0,"pod":8},{"id":78,"name":"Cielo","addr":"235 Willis Crescent, Saskatoon","city":"Saskatoon","units":184,"lat":52.088405,"lng":-106.631432,"vacant":0,"pod":14},{"id":79,"name":"Greyson","addr":"241 Willis Crescent, Saskatoon","city":"Saskatoon","units":172,"lat":52.088347,"lng":-106.629553,"vacant":0,"pod":14},{"id":80,"name":"Lockwood Arms","addr":"197 Lockwood Road, Regina","city":"Regina","units":197,"lat":50.400811,"lng":-104.626096,"vacant":0,"pod":15},{"id":81,"name":"Lawson Village","addr":"186 Pinehouse Drive, Saskatoon","city":"Saskatoon","units":186,"lat":52.169505,"lng":-106.627838,"vacant":0,"pod":14},{"id":82,"name":"The Edge","addr":"3011 James Mowatt Trail SW, Edmonton","city":"Edmonton","units":182,"lat":53.403634,"lng":-113.539155,"vacant":0,"pod":2}];
+const PROPS=[{"id":1,"name":"Mid City Manor","addr":"10250 118 Street, Edmonton","city":"Edmonton","units":20,"lat":53.54423,"lng":-113.525141,"vacant":0,"pod":0},{"id":2,"name":"Neu Manor","addr":"10330 113 Street, Edmonton","city":"Edmonton","units":5,"lat":53.499473,"lng":-113.524641,"vacant":0,"pod":2},{"id":3,"name":"The Manning","addr":"3611 145 Avenue, Edmonton","city":"Edmonton","units":23,"lat":53.60841,"lng":-113.39641,"vacant":0,"pod":4},{"id":4,"name":"The Residence","addr":"9730 106 Street, Edmonton","city":"Edmonton","units":59,"lat":53.534844,"lng":-113.503076,"vacant":0,"pod":0},{"id":5,"name":"Crestmark Place","addr":"10842 107 Street, Edmonton","city":"Edmonton","units":17,"lat":53.554401,"lng":-113.644018,"vacant":0,"pod":1},{"id":6,"name":"Kerry Manor","addr":"10210 118 Street, Edmonton","city":"Edmonton","units":22,"lat":53.543315,"lng":-113.52514,"vacant":0,"pod":0},{"id":7,"name":"Richard House","addr":"10220 118 Street, Edmonton","city":"Edmonton","units":22,"lat":53.543543,"lng":-113.52514,"vacant":0,"pod":0},{"id":8,"name":"Brighton Court","addr":"10525 156 Street, Edmonton","city":"Edmonton","units":78,"lat":53.548784,"lng":-113.589896,"vacant":0,"pod":1},{"id":9,"name":"Lorinda Court","addr":"10240 118 Street, Edmonton","city":"Edmonton","units":20,"lat":53.544001,"lng":-113.525141,"vacant":0,"pod":0},{"id":10,"name":"Rivers Edge","addr":"170 North Railway St, Okotoks","city":"Okotoks","units":24,"lat":50.722368,"lng":-113.960405,"vacant":0,"pod":11},{"id":11,"name":"Tuscany Villa","addr":"10644 109 Street, Edmonton","city":"Edmonton","units":18,"lat":53.550755,"lng":-113.508944,"vacant":0,"pod":0},{"id":12,"name":"Trails Edge","addr":"7301 4A Street SW, Okotoks","city":"Calgary","units":48,"lat":50.99089,"lng":-114.07402,"vacant":0,"pod":12},{"id":13,"name":"Rideau Place","addr":"10620 42 Avenue, Edmonton","city":"Edmonton","units":68,"lat":53.478903,"lng":-113.505702,"vacant":0,"pod":2},{"id":14,"name":"Autumn Manor","addr":"9132 149 Street, Edmonton","city":"Edmonton","units":24,"lat":53.525924,"lng":-113.578199,"vacant":0,"pod":1},{"id":15,"name":"Carina Apartments","addr":"9720 149 Street, Edmonton","city":"Edmonton","units":19,"lat":53.535311,"lng":-113.578535,"vacant":0,"pod":1},{"id":16,"name":"Danton Manor","addr":"14519 92 Street, Edmonton","city":"Edmonton","units":75,"lat":53.607472,"lng":-113.481438,"vacant":0,"pod":4},{"id":17,"name":"Jasmine Apartments","addr":"10515 70 Avenue, Edmonton","city":"Edmonton","units":18,"lat":53.506174,"lng":-113.50154,"vacant":0,"pod":2},{"id":18,"name":"Millcrest Apts","addr":"578 Millwoods Road S, Edmonton","city":"Edmonton","units":117,"lat":53.475527,"lng":-113.463266,"vacant":3,"pod":2},{"id":19,"name":"North Haven Estates","addr":"13672 38 Street, Edmonton","city":"Edmonton","units":104,"lat":53.597815,"lng":-113.399975,"vacant":0,"pod":4},{"id":20,"name":"Queensgate Manor","addr":"10610 87 Street, Edmonton","city":"Edmonton","units":34,"lat":53.549696,"lng":-113.452845,"vacant":0,"pod":0},{"id":21,"name":"Maple Leaf Court","addr":"14415 92 Street, Edmonton","city":"Edmonton","units":48,"lat":53.606639,"lng":-113.481875,"vacant":0,"pod":4},{"id":22,"name":"Monarch Manor","addr":"10654 114 Street, Edmonton","city":"Edmonton","units":20,"lat":53.551174,"lng":-113.518115,"vacant":0,"pod":0},{"id":23,"name":"Villa Grande","addr":"10005 154 Street, Edmonton","city":"Edmonton","units":23,"lat":53.539642,"lng":-113.58642,"vacant":0,"pod":1},{"id":24,"name":"Harmony at the Market","addr":"201 Festival Way, Sherwood Park","city":"Sherwood Park","units":80,"lat":53.527262,"lng":-113.297407,"vacant":0,"pod":9},{"id":25,"name":"Harmony Walker Lake A","addr":"241 Watt Common SW, Edmonton","city":"Edmonton","units":123,"lat":53.421279,"lng":-113.419319,"vacant":1,"pod":2},{"id":26,"name":"Harmony Walker Lake B","addr":"245 Watt Common SW, Edmonton","city":"Edmonton","units":55,"lat":53.421279,"lng":-113.419319,"vacant":1,"pod":2},{"id":27,"name":"Eleven","addr":"1055 11th Street SW, Calgary","city":"Calgary","units":369,"lat":51.043532,"lng":-114.089991,"vacant":28,"pod":6},{"id":28,"name":"The Loft","addr":"744 4th Avenue SW, Calgary","city":"Calgary","units":56,"lat":51.05005,"lng":-114.07825,"vacant":0,"pod":6},{"id":29,"name":"The Barracks","addr":"6855 Ad Astra Boulevard, Edmonton","city":"Edmonton","units":241,"lat":53.606978,"lng":-113.513635,"vacant":1,"pod":4},{"id":30,"name":"The Parks","addr":"10135 108 Street, Edmonton","city":"Edmonton","units":363,"lat":53.541795,"lng":-113.506472,"vacant":15,"pod":0},{"id":31,"name":"Glenmore Manor","addr":"10644 81 Avenue, Edmonton","city":"Edmonton","units":24,"lat":53.517134,"lng":-113.505656,"vacant":0,"pod":1},{"id":32,"name":"Vista on 78th","addr":"10820 78 Avenue, Edmonton","city":"Edmonton","units":27,"lat":53.514306,"lng":-113.51034,"vacant":0,"pod":1},{"id":33,"name":"Mission Flats","addr":"320 19 Avenue SW, Calgary","city":"Calgary","units":67,"lat":51.036496,"lng":-114.069739,"vacant":0,"pod":6},{"id":34,"name":"Park Centre","addr":"2014 Sherwood Drive, Sherwood Park","city":"Sherwood Park","units":177,"lat":53.570396,"lng":-113.295488,"vacant":0,"pod":9},{"id":35,"name":"Sky 1","addr":"181 Skyview Bay NE, Calgary","city":"Calgary","units":222,"lat":51.156488,"lng":-113.956866,"vacant":3,"pod":7},{"id":36,"name":"Sky 2","addr":"141 Skyview Bay NE, Calgary","city":"Calgary","units":146,"lat":51.156488,"lng":-113.956866,"vacant":0,"pod":7},{"id":37,"name":"Apple Apartments","addr":"14903 102 Avenue, Edmonton","city":"Edmonton","units":12,"lat":53.543091,"lng":-113.578565,"vacant":0,"pod":1},{"id":38,"name":"Gala Apartments","addr":"9638 156 Street, Edmonton","city":"Edmonton","units":24,"lat":53.534196,"lng":-113.590501,"vacant":0,"pod":1},{"id":39,"name":"Link95","addr":"9502 86 Street NW, Edmonton","city":"Edmonton","units":44,"lat":53.532043,"lng":-113.459639,"vacant":0,"pod":0},{"id":40,"name":"Chrysalis","addr":"10716 102 Street, Edmonton","city":"Edmonton","units":20,"lat":53.551844,"lng":-113.495675,"vacant":0,"pod":0},{"id":41,"name":"Jovie","addr":"235 Carrington Plaza NW, Calgary","city":"Calgary","units":182,"lat":51.182806,"lng":-114.092258,"vacant":4,"pod":7},{"id":42,"name":"Greenstone Park","addr":"11350 128 Street, Edmonton","city":"Edmonton","units":89,"lat":53.57012,"lng":-113.423404,"vacant":0,"pod":3},{"id":43,"name":"Woodridge Place","addr":"10139 158 Street, Edmonton","city":"Edmonton","units":54,"lat":53.619232,"lng":-113.498134,"vacant":0,"pod":1},{"id":44,"name":"Junction88","addr":"19111 Main Street SE, Calgary","city":"Calgary","units":88,"lat":50.876554,"lng":-113.952215,"vacant":4,"pod":8},{"id":45,"name":"Junction21","addr":"3870 Market Street SE, Calgary","city":"Calgary","units":21,"lat":50.879539,"lng":-113.956429,"vacant":0,"pod":8},{"id":46,"name":"The Maverick","addr":"6418 Laubman Street NW, Edmonton","city":"Edmonton","units":178,"lat":53.605343,"lng":-113.514441,"vacant":7,"pod":4},{"id":47,"name":"Linden Park","addr":"165 Element Drive, St. Albert","city":"St. Albert","units":57,"lat":53.678297,"lng":-113.6362,"vacant":0,"pod":10},{"id":48,"name":"Trailside Skyview Ranch","addr":"216 Skyview Ranch Road NE, Calgary","city":"Calgary","units":223,"lat":51.163779,"lng":-113.958303,"vacant":0,"pod":7},{"id":49,"name":"Sky 151","addr":"151 Skyview Bay NE, Calgary","city":"Calgary","units":124,"lat":51.156488,"lng":-113.956866,"vacant":3,"pod":7},{"id":50,"name":"The Aspen","addr":"6031 Currents Drive NW, Edmonton","city":"Edmonton","units":78,"lat":53.435616,"lng":-113.599285,"vacant":0,"pod":2},{"id":51,"name":"Kafa Manor","addr":"12717 119 Street NW, Edmonton","city":"Edmonton","units":8,"lat":53.585482,"lng":-113.526374,"vacant":0,"pod":4},{"id":52,"name":"Copper Manor","addr":"13011 83 Street NW, Edmonton","city":"Edmonton","units":6,"lat":53.589461,"lng":-113.468902,"vacant":0,"pod":4},{"id":53,"name":"Grandview Manor","addr":"11705 83 Street NW, Edmonton","city":"Edmonton","units":12,"lat":53.569016,"lng":-113.468628,"vacant":0,"pod":3},{"id":54,"name":"Cedar Manor","addr":"12040 82 Street NW, Edmonton","city":"Edmonton","units":18,"lat":53.574765,"lng":-113.530883,"vacant":0,"pod":3},{"id":55,"name":"Courts Manor","addr":"12239 82 Street NW, Edmonton","city":"Edmonton","units":17,"lat":53.577662,"lng":-113.46717,"vacant":0,"pod":3},{"id":56,"name":"Oakwood Manor","addr":"11348 97 Street NW, Edmonton","city":"Edmonton","units":11,"lat":53.564081,"lng":-113.492331,"vacant":0,"pod":0},{"id":57,"name":"Layali House","addr":"13710 64 Street NW, Edmonton","city":"Edmonton","units":17,"lat":53.600112,"lng":-113.440431,"vacant":0,"pod":3},{"id":58,"name":"Catalina Estates","addr":"5910 118 Avenue NW, Edmonton","city":"Edmonton","units":9,"lat":53.570463,"lng":-113.432665,"vacant":0,"pod":3},{"id":59,"name":"Sky Manor","addr":"9612 156 Street NW, Edmonton","city":"Edmonton","units":18,"lat":53.533472,"lng":-113.590506,"vacant":0,"pod":1},{"id":60,"name":"Chicklet House","addr":"10304 107 Avenue NW, Edmonton","city":"Edmonton","units":10,"lat":53.551507,"lng":-113.497645,"vacant":0,"pod":0},{"id":61,"name":"Hamlet Village","addr":"11647 124 Street NW, Edmonton","city":"Edmonton","units":8,"lat":53.568178,"lng":-113.535707,"vacant":0,"pod":3},{"id":62,"name":"Royal Lady","addr":"10746 102 Street NW, Edmonton","city":"Edmonton","units":39,"lat":53.552526,"lng":-113.495669,"vacant":0,"pod":0},{"id":63,"name":"Norwood Village","addr":"11332 95 Street, Edmonton","city":"Edmonton","units":154,"lat":53.563357,"lng":-113.487277,"vacant":0,"pod":0},{"id":64,"name":"Royal Manor","addr":"10215 108 Avenue NW, Edmonton","city":"Edmonton","units":12,"lat":53.552931,"lng":-113.496641,"vacant":0,"pod":0},{"id":65,"name":"Balwin Manor","addr":"6704 131A Avenue, Edmonton","city":"Edmonton","units":6,"lat":53.59132,"lng":-113.445443,"vacant":0,"pod":3},{"id":66,"name":"House Acadian","addr":"11535 124 Street NW, Edmonton","city":"Edmonton","units":21,"lat":53.566296,"lng":-113.533792,"vacant":0,"pod":3},{"id":67,"name":"Palisades","addr":"10825 113 Street NW, Edmonton","city":"Edmonton","units":15,"lat":53.553772,"lng":-113.515412,"vacant":0,"pod":0},{"id":68,"name":"Beverly Manor","addr":"11312 34 Street NW, Edmonton","city":"Edmonton","units":12,"lat":53.566292,"lng":-113.393839,"vacant":0,"pod":3},{"id":69,"name":"Douglas Manor","addr":"10757 83 Avenue, Edmonton","city":"Edmonton","units":57,"lat":53.518941,"lng":-113.508897,"vacant":0,"pod":1},{"id":70,"name":"Parkdale Terrace","addr":"8021 115 Avenue, Edmonton","city":"Edmonton","units":24,"lat":53.565701,"lng":-113.465196,"vacant":0,"pod":0},{"id":71,"name":"Riverview Pointe","addr":"25 Clydesdale Avenue, Cochrane","city":"Cochrane","units":209,"lat":51.201191,"lng":-114.501474,"vacant":0,"pod":13},{"id":72,"name":"Strathearn Place","addr":"9610 85 Street SW, Edmonton","city":"Edmonton","units":12,"lat":53.533679,"lng":-113.457597,"vacant":0,"pod":0},{"id":73,"name":"Rivergate","addr":"11040 82 Street NW, Edmonton","city":"Edmonton","units":9,"lat":53.55941,"lng":-113.467693,"vacant":1,"pod":0},{"id":74,"name":"Pioneer Apartments","addr":"12929 127 Street NW, Edmonton","city":"Edmonton","units":11,"lat":53.588527,"lng":-113.540841,"vacant":0,"pod":4},{"id":75,"name":"10126 154 Street","addr":"10126 154 Street NW, Edmonton","city":"Edmonton","units":6,"lat":53.54219,"lng":-113.587208,"vacant":0,"pod":1},{"id":76,"name":"Heights at River Vista","addr":"1320 Hermitage Road NW, Edmonton","city":"Edmonton","units":282,"lat":53.582996,"lng":-113.395753,"vacant":0,"pod":3},{"id":77,"name":"Legacy Place","addr":"150 Legacy Main Street SE, Calgary","city":"Calgary","units":310,"lat":50.860839,"lng":-114.017847,"vacant":0,"pod":8},{"id":78,"name":"Cielo","addr":"235 Willis Crescent, Saskatoon","city":"Saskatoon","units":184,"lat":52.088405,"lng":-106.631432,"vacant":0,"pod":14},{"id":79,"name":"Greyson","addr":"241 Willis Crescent, Saskatoon","city":"Saskatoon","units":172,"lat":52.088347,"lng":-106.629553,"vacant":0,"pod":14},{"id":80,"name":"Lockwood Arms","addr":"197 Lockwood Road, Regina","city":"Regina","units":197,"lat":50.400811,"lng":-104.626096,"vacant":0,"pod":15},{"id":81,"name":"Lawson Village","addr":"186 Pinehouse Drive, Saskatoon","city":"Saskatoon","units":186,"lat":52.169505,"lng":-106.627838,"vacant":0,"pod":14},{"id":82,"name":"The Edge","addr":"3011 James Mowatt Trail SW, Edmonton","city":"Edmonton","units":182,"lat":53.403634,"lng":-113.539155,"vacant":0,"pod":2}];
 const PODS=[{"id":0,"name":"Edm Downtown","metro":"Edmonton","centroid":[53.54921,-113.49604],"radius":3.07,"color":"#3b82f6","count":20},{"id":1,"name":"Edm West","metro":"Edmonton","centroid":[53.54051,-113.56514],"radius":9.81,"color":"#f59e0b","count":13},{"id":2,"name":"Edm South","metro":"Edmonton","centroid":[53.45524,-113.49653],"radius":7.15,"color":"#10b981","count":8},{"id":3,"name":"Edm NE Inner","metro":"Edmonton","centroid":[53.57611,-113.4607],"radius":5.03,"color":"#8b5cf6","count":11},{"id":4,"name":"Edm North","metro":"Edmonton","centroid":[53.59957,-113.48043],"radius":5.63,"color":"#ec4899","count":9},{"id":6,"name":"Cal Downtown","metro":"Calgary","centroid":[51.04336,-114.07933],"radius":1.02,"color":"#ef4444","count":3},{"id":7,"name":"Cal Skyview NE","metro":"Calgary","centroid":[51.16321,-113.98423],"radius":7.84,"color":"#f97316","count":5},{"id":8,"name":"Cal SE","metro":"Calgary","centroid":[50.87231,-113.9755],"radius":3.23,"color":"#84cc16","count":3},{"id":9,"name":"Sherwood Park","metro":"Sherwood Park","centroid":[53.54883,-113.29645],"radius":2.4,"color":"#fb923c","count":2},{"id":10,"name":"St. Albert","metro":"St. Albert","centroid":[53.6783,-113.6362],"radius":0.0,"color":"#14b8a6","count":1},{"id":11,"name":"Okotoks","metro":"Okotoks","centroid":[50.72237,-113.9604],"radius":0.0,"color":"#64748b","count":1},{"id":12,"name":"Cal SW","metro":"Calgary","centroid":[50.99089,-114.07402],"radius":0.0,"color":"#94a3b8","count":1},{"id":13,"name":"Cochrane","metro":"Cochrane","centroid":[51.20119,-114.50147],"radius":0.0,"color":"#78716c","count":1},{"id":14,"name":"Saskatoon","metro":"Saskatoon","centroid":[52.11542,-106.62961],"radius":6.02,"color":"#6b7280","count":3},{"id":15,"name":"Regina","metro":"Regina","centroid":[50.40081,-104.6261],"radius":0.0,"color":"#9ca3af","count":1}];
 const EDM_CRIME={"ABBOTTSFIELD":125,"ALBANY":189,"ALBERTA AVENUE":809,"ALBERTA PARK INDUSTRIAL":45,"ALCES":56,"ALDERGROVE":93,"ALLARD":83,"ALLENDALE":307,"AMBLESIDE":254,"ANTHONY HENDAY":50,"ANTHONY HENDAY BIG LAKE":27,"ANTHONY HENDAY CASTLEDOWNS":8,"ANTHONY HENDAY CLAREVIEW":7,"ANTHONY HENDAY ENERGY PARK":8,"ANTHONY HENDAY HORSE HILL":3,"ANTHONY HENDAY LAKE DISTRICT":4,"ANTHONY HENDAY MISTATIM":1,"ANTHONY HENDAY RAMPART":14,"ANTHONY HENDAY SOUTH":32,"ANTHONY HENDAY SOUTH BLACKBURNE":2,"ANTHONY HENDAY SOUTH EAST":100,"ANTHONY HENDAY SOUTH WEST":23,"ANTHONY HENDAY TERWILLEGAR":48,"ARGYLL":24,"ARMSTRONG INDUSTRIAL":40,"ASPEN GARDENS":28,"ASTER":60,"ATHLONE":212,"AVONMORE":98,"BALWIN":268,"BANNERMAN":207,"BARANOW":1192,"BATURYN":140,"BEACON HEIGHTS":208,"BEARSPAW":28,"BEAUMARIS":203,"BELGRAVIA":51,"BELLE RIVE":72,"BELLEVUE":199,"BELMEAD":187,"BELMONT":162,"BELVEDERE":832,"BERGMAN":50,"BEVERLY HEIGHTS":461,"BISSET":81,"BLACKBURNE":14,"BLACKMUD CREEK":66,"BLACKMUD CREEK RAVINE":6,"BLATCHFORD AREA":201,"BLUE QUILL":125,"BLUE QUILL ESTATES":26,"BONAVENTURE INDUSTRIAL":57,"BONNIE DOON":1228,"BOYLE STREET":1259,"BRANDER GARDENS":50,"BRECKENRIDGE GREENS":32,"BRINTNELL":126,"BRITANNIA YOUNGSTOWN":853,"BROOKSIDE":40,"BROWN INDUSTRIAL":18,"BULYEA HEIGHTS":24,"CAERNARVON":177,"CALDER":292,"CALGARY TRAIL NORTH":859,"CALGARY TRAIL SOUTH":597,"CALLAGHAN":71,"CALLINGWOOD NORTH":153,"CALLINGWOOD SOUTH":393,"CAMERON HEIGHTS":19,"CANON RIDGE":92,"CANORA":254,"CANOSSA":50,"CAPILANO":37,"CARLETON SQUARE INDUSTRIAL":43,"CARLISLE":103,"CARLTON":70,"CARTER CREST":19,"CASHMAN":87,"CASSELMAN":112,"CAVANAGH":65,"CENTRAL MCDOUGALL":1874,"CHAMBERY":52,"CHAPPELLE":333,"CHARLESWORTH":424,"CLAREVIEW TOWN CENTRE":1895,"CLOVER BAR AREA":55,"CLOVERDALE":71,"CORONET ADDITION INDUSTRIAL":48,"CORONET INDUSTRIAL":71,"CPR IRVINE":119,"CRAWFORD PLAINS":329,"CRESTWOOD":91,"CROMDALE":235,"CROSSROADS":2,"CRYSTALLINA NERA EAST":36,"CRYSTALLINA NERA WEST":94,"CUMBERLAND":184,"CY BECKER":77,"DALY GROVE":87,"DAVIES INDUSTRIAL EAST":77,"DAVIES INDUSTRIAL WEST":112,"DECHENE":19,"DECOTEAU":5,"DELTON":139,"DELWOOD":209,"DESROCHERS AREA":111,"DOMINION INDUSTRIAL":40,"DONSDALE":14,"DOVERCOURT":96,"DOWNTOWN":4573,"DUGGAN":161,"DUNLUCE":195,"EASTGATE BUSINESS PARK":88,"EASTWOOD":535,"EAUX CLAIRES":700,"EBBERS":46,"EDGEMONT":183,"EDMISTON INDUSTRIAL":47,"EDMONTON ENERGY AND TECHNOLOGY PARK":33,"EDMONTON NORTHLANDS":97,"EDMONTON RESEARCH AND DEVELOPMENT PARK":13,"EDMONTON SOUTH CENTRAL":20,"EDMONTON SOUTH CENTRAL EAST":7,"EDMONTON SOUTH EAST":5,"EDMONTON SOUTH WEST":9,"EKOTA":87,"ELLERSLIE":103,"ELLERSLIE INDUSTRIAL":219,"ELMWOOD":82,"ELMWOOD PARK":73,"ELSINORE":46,"EMPIRE PARK":1222,"ERMINESKIN":328,"EVANSDALE":203,"EVERGREEN":72,"FALCONER HEIGHTS":112,"FOREST HEIGHTS":272,"FRASER":108,"FULTON PLACE":89,"GAGNON ESTATE INDUSTRIAL":113,"GAINER INDUSTRIAL":28,"GARIEPY":31,"GARNEAU":519,"GARSIDE INDUSTRIAL":31,"GIRARD INDUSTRIAL":140,"GLASTONBURY":248,"GLENGARRY":864,"GLENORA":158,"GLENRIDDING HEIGHTS":86,"GLENRIDDING RAVINE":77,"GLENWOOD":608,"GOLD BAR":82,"GOODRIDGE CORNERS":199,"GORMAN":294,"GRANDVIEW HEIGHTS":15,"GRANVILLE":205,"GRAYDON HILL":12,"GREENFIELD":75,"GREENVIEW":73,"GRIESBACH":492,"GROVENOR":142,"HADDOW":51,"HAGMANN ESTATE INDUSTRIAL":40,"HAIRSINE":86,"HAWIN PARK ESTATE INDUSTRIAL":31,"HAWKS RIDGE":15,"HAYS RIDGE AREA":51,"HAZELDEAN":103,"HENDERSON ESTATES":12,"HERITAGE VALLEY AREA":6,"HERITAGE VALLEY TOWN CENTRE":469,"HIGH PARK":311,"HIGH PARK INDUSTRIAL":81,"HIGHLANDS":296,"HILLVIEW":173,"HODGSON":44,"HOLLICK-KENYON":196,"HOLYROOD":175,"HOMESTEADER":220,"HUDSON":96,"HUFF BREMNER ESTATE INDUSTRIAL":199,"IDYLWYLDE":139,"INDUSTRIAL HEIGHTS":36,"INGLEWOOD":554,"JACKSON HEIGHTS":85,"JAMIESON PLACE":63,"JASPER PARK":192,"KAMEYOSEK":105,"KEHEEWIN":648,"KENDAL":6,"KENILWORTH":88,"KENNEDALE INDUSTRIAL":305,"KENSINGTON":163,"KERNOHAN":103,"KESWICK":186,"KILDARE":313,"KILKENNY":211,"KILLARNEY":299,"KING EDWARD PARK":295,"KINGLET GARDENS":43,"KINISKI GARDENS":152,"KINOKAMAU PLAINS AREA":50,"KIRKNESS":135,"KLARVATTEN":103,"LA PERLE":143,"LAGO LINDO":87,"LAMBTON INDUSTRIAL":31,"LANSDOWNE":32,"LARKSPUR":266,"LAUDERDALE":256,"LAUREL":249,"LAURIER HEIGHTS":53,"LEE RIDGE":116,"LEGER":110,"LENDRUM PLACE":63,"LEWIS FARMS":0,"LEWIS FARMS BUSINESS EMPLOYMENT":35,"LORELEI":131,"LYMBURN":111,"LYNNWOOD":83,"MACEWAN":305,"MACTAGGART":93,"MAGRATH HEIGHTS":192,"MALMO PLAINS":84,"MAPLE":169,"MAPLE RIDGE":60,"MAPLE RIDGE INDUSTRIAL":26,"MARQUIS":21,"MATT BERRY":71,"MATTSON":25,"MAYFIELD":128,"MAYLIEWAN":57,"MCARTHUR INDUSTRIAL":49,"MCCAULEY":1763,"MCCONACHIE":251,"MCINTYRE INDUSTRIAL":107,"MCKERNAN":149,"MCLEOD":69,"MCNAMARA INDUSTRIAL":68,"MCQUEEN":79,"MEADOWLARK PARK":351,"MELTWATER":14,"MENISA":97,"MEYOKUMIN":205,"MEYONOHK":91,"MICHAELS PARK":89,"MILL CREEK RAVINE NORTH":12,"MILL CREEK RAVINE SOUTH":36,"MILL WOODS GOLF COURSE":5,"MILL WOODS PARK":95,"MILL WOODS TOWN CENTRE":776,"MILLER":93,"MINCHAU":75,"MISTATIM INDUSTRIAL":129,"MITCHELL INDUSTRIAL":50,"MONTROSE":303,"MORIN INDUSTRIAL":95,"MORRIS INDUSTRIAL":20,"NEWTON":148,"NORTH GLENORA":64,"NORTHMOUNT":344,"NORWESTER INDUSTRIAL":37,"OGILVIE RIDGE":11,"OLESKIW":43,"ORMSBY PLACE":189,"OTTEWELL":764,"OVERLANDERS":97,"OXFORD":68,"OZERNA":64,"PAISLEY":50,"PAPASCHASE INDUSTRIAL":99,"PARKALLEN":152,"PARKDALE":618,"PARKVIEW":107,"PARSONS INDUSTRIAL":640,"PATRICIA HEIGHTS":36,"PEMBINA":301,"PINTAIL LANDING":0,"PLACE LARUE":455,"PLEASANTVIEW":339,"POLLARD MEADOWS":160,"POTTER GREENS":30,"POUNDMAKER INDUSTRIAL":10,"PRINCE CHARLES":258,"PRINCE RUPERT":1958,"PYLYPOW INDUSTRIAL":84,"QUARRY RIDGE":6,"QUEEN ALEXANDRA":1002,"QUEEN MARY PARK":946,"QUESNELL HEIGHTS":5,"RAMPART INDUSTRIAL":33,"RAMSAY HEIGHTS":53,"RAPPERSWILL":75,"RHATIGAN RIDGE":33,"RICHFIELD":182,"RICHFORD":14,"RIDEAU PARK":110,"RIO TERRACE":23,"RITCHIE":516,"RIVER VALLEY CAMERON":2,"RIVER VALLEY CAPITOL HILL":9,"RIVER VALLEY FORT EDMONTON":7,"RIVER VALLEY GLENORA":13,"RIVER VALLEY GOLD BAR":18,"RIVER VALLEY HERMITAGE":15,"RIVER VALLEY HIGHLANDS":11,"RIVER VALLEY KENDAL":0,"RIVER VALLEY KESWICK":0,"RIVER VALLEY KINNAIRD":29,"RIVER VALLEY LAURIER":18,"RIVER VALLEY LESSARD NORTH":0,"RIVER VALLEY MAYFAIR":13,"RIVER VALLEY OLESKIW":0,"RIVER VALLEY RIVERSIDE":23,"RIVER VALLEY RUNDLE":33,"RIVER VALLEY TERWILLEGAR":13,"RIVER VALLEY VICTORIA":64,"RIVER VALLEY WALTERDALE":84,"RIVER VALLEY WHITEMUD":21,"RIVER VALLEY WINDERMERE":1,"RIVER'S EDGE":31,"RIVERDALE":72,"RIVERVIEW AREA":8,"ROPER INDUSTRIAL":104,"ROSEDALE INDUSTRIAL":52,"ROSENTHAL":123,"ROSSDALE":60,"ROSSLYN":225,"ROYAL GARDENS":117,"RUNDLE HEIGHTS":114,"RURAL NORTH EAST HORSE HILL":101,"RURAL NORTH EAST SOUTH STURGEON":24,"RUTHERFORD":116,"SAKAW":103,"SATOO":95,"SCHONSEE":87,"SECORD":189,"SHEFFIELD INDUSTRIAL":73,"SHERBROOKE":133,"SHERWOOD":46,"SIFTON PARK":87,"SILVER BERRY":335,"SKYRATTLER":62,"SOUTH EDMONTON COMMON":753,"SOUTH TERWILLEGAR":125,"SOUTHEAST INDUSTRIAL":137,"SPRUCE AVENUE":827,"STARLING":20,"STEINHAUER":61,"STEWART GREENS":4,"STILLWATER":54,"STONE INDUSTRIAL":565,"STRATHCONA":541,"STRATHCONA INDUSTRIAL PARK":192,"STRATHCONA JUNCTION":216,"STRATHEARN":174,"SUDER GREENS":116,"SUMMERLEA":236,"SUMMERSIDE":416,"SUNWAPTA INDUSTRIAL":65,"SWEET GRASS":48,"TAMARACK":915,"TAWA":237,"TERRA LOSA":712,"TERRACE HEIGHTS":115,"TERWILLEGAR TOWNE":77,"THE HAMPTONS":139,"THE ORCHARDS AT ELLERSLIE":215,"THE UPLANDS":59,"THORNCLIFF":110,"TIPASKAN":103,"TRUMPETER AREA":35,"TWEDDLE PLACE":140,"TWIN BROOKS":76,"UNIVERSITY OF ALBERTA":692,"UNIVERSITY OF ALBERTA FARM":51,"VIRGINIA PARK":47,"WALKER":345,"WEBBER GREENS":40,"WEDGEWOOD HEIGHTS":19,"WEINLOS":84,"WEIR INDUSTRIAL":83,"WELLINGTON":176,"WEST JASPER PLACE":442,"WEST MEADOWLARK PARK":854,"WEST SHEFFIELD INDUSTRIAL":142,"WESTBROOK ESTATES":27,"WESTMOUNT":388,"WESTRIDGE":12,"WESTVIEW VILLAGE":56,"WESTWOOD":358,"WHITE INDUSTRIAL":49,"WHITEMUD CREEK RAVINE NORTH":14,"WHITEMUD CREEK RAVINE SOUTH":16,"WHITEMUD CREEK RAVINE TWIN BROOKS":0,"WILD ROSE":147,"WILSON INDUSTRIAL":30,"WINDERMERE":428,"WINDSOR PARK":62,"WINTERBURN INDUSTRIAL AREA EAST":98,"WINTERBURN INDUSTRIAL AREA WEST":115,"WOODCROFT":775,"W\u00ceHKW\u00caNT\u00d4WIN":1944,"YELLOWHEAD CORRIDOR EAST":140,"YELLOWHEAD CORRIDOR WEST":50,"YORK":297,"YOUNGSTOWN INDUSTRIAL":124};
 const EDM_VIOLENT={"ABBOTTSFIELD":17,"ALBANY":11,"ALBERTA AVENUE":138,"ALBERTA PARK INDUSTRIAL":4,"ALCES":5,"ALDERGROVE":15,"ALLARD":0,"ALLENDALE":20,"AMBLESIDE":16,"ANTHONY HENDAY":1,"ANTHONY HENDAY BIG LAKE":1,"ANTHONY HENDAY CASTLEDOWNS":5,"ANTHONY HENDAY CLAREVIEW":0,"ANTHONY HENDAY ENERGY PARK":0,"ANTHONY HENDAY HORSE HILL":1,"ANTHONY HENDAY LAKE DISTRICT":0,"ANTHONY HENDAY MISTATIM":0,"ANTHONY HENDAY RAMPART":0,"ANTHONY HENDAY SOUTH":0,"ANTHONY HENDAY SOUTH BLACKBURNE":0,"ANTHONY HENDAY SOUTH EAST":3,"ANTHONY HENDAY SOUTH WEST":2,"ANTHONY HENDAY TERWILLEGAR":4,"ARGYLL":1,"ARMSTRONG INDUSTRIAL":2,"ASPEN GARDENS":3,"ASTER":2,"ATHLONE":26,"AVONMORE":8,"BALWIN":30,"BANNERMAN":20,"BARANOW":27,"BATURYN":17,"BEACON HEIGHTS":21,"BEARSPAW":0,"BEAUMARIS":28,"BELGRAVIA":2,"BELLE RIVE":11,"BELLEVUE":42,"BELMEAD":25,"BELMONT":24,"BELVEDERE":132,"BERGMAN":1,"BEVERLY HEIGHTS":61,"BISSET":9,"BLACKBURNE":1,"BLACKMUD CREEK":6,"BLACKMUD CREEK RAVINE":0,"BLATCHFORD AREA":20,"BLUE QUILL":15,"BLUE QUILL ESTATES":1,"BONAVENTURE INDUSTRIAL":1,"BONNIE DOON":64,"BOYLE STREET":189,"BRANDER GARDENS":4,"BRECKENRIDGE GREENS":4,"BRINTNELL":15,"BRITANNIA YOUNGSTOWN":103,"BROOKSIDE":5,"BROWN INDUSTRIAL":2,"BULYEA HEIGHTS":3,"CAERNARVON":19,"CALDER":27,"CALGARY TRAIL NORTH":31,"CALGARY TRAIL SOUTH":31,"CALLAGHAN":2,"CALLINGWOOD NORTH":23,"CALLINGWOOD SOUTH":27,"CAMERON HEIGHTS":1,"CANON RIDGE":6,"CANORA":33,"CANOSSA":2,"CAPILANO":3,"CARLETON SQUARE INDUSTRIAL":1,"CARLISLE":5,"CARLTON":1,"CARTER CREST":1,"CASHMAN":8,"CASSELMAN":17,"CAVANAGH":3,"CENTRAL MCDOUGALL":422,"CHAMBERY":3,"CHAPPELLE":38,"CHARLESWORTH":8,"CLAREVIEW TOWN CENTRE":133,"CLOVER BAR AREA":1,"CLOVERDALE":12,"CORONET ADDITION INDUSTRIAL":0,"CORONET INDUSTRIAL":3,"CPR IRVINE":15,"CRAWFORD PLAINS":13,"CRESTWOOD":10,"CROMDALE":49,"CROSSROADS":0,"CRYSTALLINA NERA EAST":3,"CRYSTALLINA NERA WEST":8,"CUMBERLAND":11,"CY BECKER":7,"DALY GROVE":7,"DAVIES INDUSTRIAL EAST":3,"DAVIES INDUSTRIAL WEST":11,"DECHENE":5,"DECOTEAU":0,"DELTON":15,"DELWOOD":14,"DESROCHERS AREA":8,"DOMINION INDUSTRIAL":1,"DONSDALE":0,"DOVERCOURT":9,"DOWNTOWN":807,"DUGGAN":20,"DUNLUCE":23,"EASTGATE BUSINESS PARK":5,"EASTWOOD":106,"EAUX CLAIRES":46,"EBBERS":7,"EDGEMONT":9,"EDMISTON INDUSTRIAL":6,"EDMONTON ENERGY AND TECHNOLOGY PARK":0,"EDMONTON NORTHLANDS":21,"EDMONTON RESEARCH AND DEVELOPMENT PARK":1,"EDMONTON SOUTH CENTRAL":1,"EDMONTON SOUTH CENTRAL EAST":0,"EDMONTON SOUTH EAST":1,"EDMONTON SOUTH WEST":0,"EKOTA":11,"ELLERSLIE":8,"ELLERSLIE INDUSTRIAL":17,"ELMWOOD":11,"ELMWOOD PARK":7,"ELSINORE":7,"EMPIRE PARK":106,"ERMINESKIN":41,"EVANSDALE":23,"EVERGREEN":17,"FALCONER HEIGHTS":4,"FOREST HEIGHTS":6,"FRASER":13,"FULTON PLACE":5,"GAGNON ESTATE INDUSTRIAL":8,"GAINER INDUSTRIAL":0,"GARIEPY":4,"GARNEAU":55,"GARSIDE INDUSTRIAL":2,"GIRARD INDUSTRIAL":7,"GLASTONBURY":13,"GLENGARRY":81,"GLENORA":11,"GLENRIDDING HEIGHTS":1,"GLENRIDDING RAVINE":1,"GLENWOOD":65,"GOLD BAR":10,"GOODRIDGE CORNERS":106,"GORMAN":11,"GRANDVIEW HEIGHTS":1,"GRANVILLE":5,"GRAYDON HILL":1,"GREENFIELD":4,"GREENVIEW":5,"GRIESBACH":20,"GROVENOR":10,"HADDOW":1,"HAGMANN ESTATE INDUSTRIAL":2,"HAIRSINE":9,"HAWIN PARK ESTATE INDUSTRIAL":0,"HAWKS RIDGE":1,"HAYS RIDGE AREA":1,"HAZELDEAN":4,"HENDERSON ESTATES":1,"HERITAGE VALLEY AREA":0,"HERITAGE VALLEY TOWN CENTRE":4,"HIGH PARK":40,"HIGH PARK INDUSTRIAL":5,"HIGHLANDS":34,"HILLVIEW":17,"HODGSON":2,"HOLLICK-KENYON":11,"HOLYROOD":10,"HOMESTEADER":23,"HUDSON":2,"HUFF BREMNER ESTATE INDUSTRIAL":10,"IDYLWYLDE":10,"INDUSTRIAL HEIGHTS":3,"INGLEWOOD":75,"JACKSON HEIGHTS":10,"JAMIESON PLACE":4,"JASPER PARK":14,"KAMEYOSEK":7,"KEHEEWIN":13,"KENDAL":0,"KENILWORTH":5,"KENNEDALE INDUSTRIAL":17,"KENSINGTON":15,"KERNOHAN":8,"KESWICK":7,"KILDARE":41,"KILKENNY":31,"KILLARNEY":53,"KING EDWARD PARK":26,"KINGLET GARDENS":3,"KINISKI GARDENS":9,"KINOKAMAU PLAINS AREA":0,"KIRKNESS":17,"KLARVATTEN":9,"LA PERLE":16,"LAGO LINDO":8,"LAMBTON INDUSTRIAL":1,"LANSDOWNE":0,"LARKSPUR":19,"LAUDERDALE":35,"LAUREL":24,"LAURIER HEIGHTS":0,"LEE RIDGE":14,"LEGER":19,"LENDRUM PLACE":2,"LEWIS FARMS":0,"LEWIS FARMS BUSINESS EMPLOYMENT":4,"LORELEI":9,"LYMBURN":12,"LYNNWOOD":6,"MACEWAN":10,"MACTAGGART":4,"MAGRATH HEIGHTS":3,"MALMO PLAINS":0,"MAPLE":12,"MAPLE RIDGE":6,"MAPLE RIDGE INDUSTRIAL":0,"MARQUIS":0,"MATT BERRY":6,"MATTSON":0,"MAYFIELD":11,"MAYLIEWAN":2,"MCARTHUR INDUSTRIAL":2,"MCCAULEY":419,"MCCONACHIE":20,"MCINTYRE INDUSTRIAL":5,"MCKERNAN":17,"MCLEOD":12,"MCNAMARA INDUSTRIAL":3,"MCQUEEN":5,"MEADOWLARK PARK":18,"MELTWATER":2,"MENISA":10,"MEYOKUMIN":10,"MEYONOHK":9,"MICHAELS PARK":8,"MILL CREEK RAVINE NORTH":1,"MILL CREEK RAVINE SOUTH":12,"MILL WOODS GOLF COURSE":0,"MILL WOODS PARK":21,"MILL WOODS TOWN CENTRE":74,"MILLER":12,"MINCHAU":7,"MISTATIM INDUSTRIAL":6,"MITCHELL INDUSTRIAL":3,"MONTROSE":48,"MORIN INDUSTRIAL":9,"MORRIS INDUSTRIAL":0,"NEWTON":18,"NORTH GLENORA":5,"NORTHMOUNT":41,"NORWESTER INDUSTRIAL":2,"OGILVIE RIDGE":0,"OLESKIW":1,"ORMSBY PLACE":22,"OTTEWELL":41,"OVERLANDERS":10,"OXFORD":7,"OZERNA":4,"PAISLEY":0,"PAPASCHASE INDUSTRIAL":0,"PARKALLEN":11,"PARKDALE":105,"PARKVIEW":5,"PARSONS INDUSTRIAL":9,"PATRICIA HEIGHTS":1,"PEMBINA":15,"PINTAIL LANDING":0,"PLACE LARUE":35,"PLEASANTVIEW":23,"POLLARD MEADOWS":21,"POTTER GREENS":2,"POUNDMAKER INDUSTRIAL":2,"PRINCE CHARLES":40,"PRINCE RUPERT":52,"PYLYPOW INDUSTRIAL":4,"QUARRY RIDGE":0,"QUEEN ALEXANDRA":132,"QUEEN MARY PARK":93,"QUESNELL HEIGHTS":0,"RAMPART INDUSTRIAL":6,"RAMSAY HEIGHTS":5,"RAPPERSWILL":6,"RHATIGAN RIDGE":2,"RICHFIELD":23,"RICHFORD":0,"RIDEAU PARK":11,"RIO TERRACE":1,"RITCHIE":37,"RIVER VALLEY CAMERON":0,"RIVER VALLEY CAPITOL HILL":0,"RIVER VALLEY FORT EDMONTON":1,"RIVER VALLEY GLENORA":1,"RIVER VALLEY GOLD BAR":4,"RIVER VALLEY HERMITAGE":0,"RIVER VALLEY HIGHLANDS":0,"RIVER VALLEY KENDAL":0,"RIVER VALLEY KESWICK":0,"RIVER VALLEY KINNAIRD":5,"RIVER VALLEY LAURIER":2,"RIVER VALLEY LESSARD NORTH":0,"RIVER VALLEY MAYFAIR":1,"RIVER VALLEY OLESKIW":0,"RIVER VALLEY RIVERSIDE":5,"RIVER VALLEY RUNDLE":4,"RIVER VALLEY TERWILLEGAR":1,"RIVER VALLEY VICTORIA":4,"RIVER VALLEY WALTERDALE":12,"RIVER VALLEY WHITEMUD":0,"RIVER VALLEY WINDERMERE":0,"RIVER'S EDGE":2,"RIVERDALE":12,"RIVERVIEW AREA":0,"ROPER INDUSTRIAL":8,"ROSEDALE INDUSTRIAL":10,"ROSENTHAL":7,"ROSSDALE":5,"ROSSLYN":25,"ROYAL GARDENS":10,"RUNDLE HEIGHTS":11,"RURAL NORTH EAST HORSE HILL":57,"RURAL NORTH EAST SOUTH STURGEON":0,"RUTHERFORD":7,"SAKAW":10,"SATOO":12,"SCHONSEE":5,"SECORD":12,"SHEFFIELD INDUSTRIAL":5,"SHERBROOKE":15,"SHERWOOD":2,"SIFTON PARK":9,"SILVER BERRY":46,"SKYRATTLER":3,"SOUTH EDMONTON COMMON":14,"SOUTH TERWILLEGAR":6,"SOUTHEAST INDUSTRIAL":2,"SPRUCE AVENUE":106,"STARLING":1,"STEINHAUER":3,"STEWART GREENS":0,"STILLWATER":2,"STONE INDUSTRIAL":8,"STRATHCONA":73,"STRATHCONA INDUSTRIAL PARK":18,"STRATHCONA JUNCTION":34,"STRATHEARN":16,"SUDER GREENS":11,"SUMMERLEA":33,"SUMMERSIDE":16,"SUNWAPTA INDUSTRIAL":6,"SWEET GRASS":2,"TAMARACK":30,"TAWA":23,"TERRA LOSA":18,"TERRACE HEIGHTS":11,"TERWILLEGAR TOWNE":7,"THE HAMPTONS":11,"THE ORCHARDS AT ELLERSLIE":13,"THE UPLANDS":2,"THORNCLIFF":14,"TIPASKAN":9,"TRUMPETER AREA":2,"TWEDDLE PLACE":13,"TWIN BROOKS":2,"UNIVERSITY OF ALBERTA":91,"UNIVERSITY OF ALBERTA FARM":2,"VIRGINIA PARK":5,"WALKER":40,"WEBBER GREENS":5,"WEDGEWOOD HEIGHTS":0,"WEINLOS":9,"WEIR INDUSTRIAL":2,"WELLINGTON":22,"WEST JASPER PLACE":22,"WEST MEADOWLARK PARK":78,"WEST SHEFFIELD INDUSTRIAL":1,"WESTBROOK ESTATES":1,"WESTMOUNT":30,"WESTRIDGE":0,"WESTVIEW VILLAGE":7,"WESTWOOD":59,"WHITE INDUSTRIAL":2,"WHITEMUD CREEK RAVINE NORTH":3,"WHITEMUD CREEK RAVINE SOUTH":2,"WHITEMUD CREEK RAVINE TWIN BROOKS":0,"WILD ROSE":12,"WILSON INDUSTRIAL":1,"WINDERMERE":16,"WINDSOR PARK":3,"WINTERBURN INDUSTRIAL AREA EAST":3,"WINTERBURN INDUSTRIAL AREA WEST":5,"WOODCROFT":52,"W\u00ceHKW\u00caNT\u00d4WIN":203,"YELLOWHEAD CORRIDOR EAST":15,"YELLOWHEAD CORRIDOR WEST":3,"YORK":27,"YOUNGSTOWN INDUSTRIAL":2};
@@ -211,206 +291,191 @@ const CAL_VIOLENT={};
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let tour=[],markers={},podLayers={},podVisible={},clusterGroup,routeLayer;
-let crimeLayer=null,crimeMode='total',currentCity='all',vacantOnly=false,routeDebounce,lastLegs=[];
-
+let crimeLayer=null,crimeMode='total',currentCity='all',vacantOnly=false;
+let routeDebounce,lastLegs=[];
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
-const isMobile=/Mobi|Android|iPad|iPhone|iPod/.test(navigator.userAgent);
+const podColor=id=>{const p=PODS.find(x=>x.id===id);return p?p.color:'#64748b';};
+const podName=id=>{const p=PODS.find(x=>x.id===id);return p?p.name:`Pod ${id}`;};
+const commission=()=>parseInt(document.getElementById('commission-input')?.value||500)||500;
 
-const podColor=id=>{const p=PODS.find(x=>x.id===id);return p?p.color:'#6b7280';};
-const podName =id=>{const p=PODS.find(x=>x.id===id);return p?p.name:`Pod ${id}`;};
+// ── Portfolio stats ───────────────────────────────────────────────────────────
+function updateStats(){
+  const totalVac=PROPS.reduce((s,p)=>s+p.vacant,0);
+  const comm=commission();
+  document.getElementById('stat-vac').textContent=totalVac>0?totalVac:'—';
+  document.getElementById('stat-earn').textContent=totalVac>0?'$'+(totalVac*comm).toLocaleString():'—';
+}
 
 // ── Map ───────────────────────────────────────────────────────────────────────
 const map=L.map('map',{zoomControl:true}).setView([53.5461,-113.4938],10);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-  attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19
-}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
 clusterGroup=L.markerClusterGroup({
-  maxClusterRadius:35,spiderfyOnMaxZoom:true,showCoverageOnHover:false,
+  maxClusterRadius:40,spiderfyOnMaxZoom:true,showCoverageOnHover:false,
   iconCreateFunction(c){
-    const n=c.getChildCount(),s=n<10?30:n<50?36:42;
-    return L.divIcon({html:`<div style="width:${s}px;height:${s}px;border-radius:50%;background:rgba(29,78,216,.85);border:2px solid rgba(96,165,250,.7);display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.5)">${n}</div>`,className:'',iconSize:[s,s],iconAnchor:[s/2,s/2]});
+    const n=c.getChildCount(),s=n<10?32:n<50?38:44;
+    // Check if any in cluster have vacancy
+    const hasVac=c.getAllChildMarkers().some(m=>m._propData&&m._propData.vacant>0);
+    const bg=hasVac?'rgba(157,23,77,.85)':'rgba(29,78,216,.85)';
+    const border=hasVac?'rgba(253,164,175,.7)':'rgba(96,165,250,.7)';
+    return L.divIcon({html:`<div style="width:${s}px;height:${s}px;border-radius:50%;background:${bg};border:2px solid ${border};display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.5)">${n}</div>`,className:'',iconSize:[s,s],iconAnchor:[s/2,s/2]});
   }
 });
 map.addLayer(clusterGroup);
 
 // ── Crime ─────────────────────────────────────────────────────────────────────
-function getCrimeColor(count,max){
-  if(!count||count===0)return 'transparent';
-  const p=count/max;
-  if(p<0.05)return '#4ade80';if(p<0.15)return '#a3e635';if(p<0.3)return '#facc15';
-  if(p<0.5)return '#f97316';if(p<0.75)return '#ef4444';return '#991b1b';
-}
+function getCrimeColor(c,max){if(!c)return 'transparent';const p=c/max;if(p<.05)return '#4ade80';if(p<.15)return '#a3e635';if(p<.3)return '#facc15';if(p<.5)return '#f97316';if(p<.75)return '#ef4444';return '#991b1b';}
 function buildCrimeLayer(mode){
-  if(crimeLayer){map.removeLayer(crimeLayer);crimeLayer=null;}
-  if(mode==='off')return;
+  if(crimeLayer){map.removeLayer(crimeLayer);crimeLayer=null;}if(mode==='off')return;
   const layers=[];
-  const edmData=mode==='violent'?EDM_VIOLENT:EDM_CRIME;
-  const edmMax=Math.max(...Object.values(edmData).filter(v=>v>0))*0.6;
-  layers.push(L.geoJSON(EDM_GEO,{
-    style(f){const c=edmData[f.properties.name]||0;return{fillColor:getCrimeColor(c,edmMax),fillOpacity:c>0?0.55:0,color:'rgba(0,0,0,0.15)',weight:0.5,interactive:c>0};},
-    onEachFeature(f,l){
-      const nm=f.properties.name,tot=EDM_CRIME[nm]||0,vio=EDM_VIOLENT[nm]||0;
-      if(!tot)return;
-      l.on('mouseover',e=>{L.popup({className:'',closeButton:false,offset:[0,-5]}).setLatLng(e.latlng).setContent(`<div style="background:#1f2937;border:1px solid #374151;padding:8px 11px;border-radius:7px;font-size:11px;color:#f9fafb;min-width:160px"><div style="font-weight:700;margin-bottom:3px">${nm}</div><div style="color:#9ca3af;font-size:9px">Edmonton · 30-day incidents</div><div style="margin-top:5px;display:flex;gap:12px"><div><span style="font-size:16px;font-weight:700;color:#f87171">${tot.toLocaleString()}</span><div style="font-size:9px;color:#6b7280">Total</div></div><div><span style="font-size:16px;font-weight:700;color:#fbbf24">${vio.toLocaleString()}</span><div style="font-size:9px;color:#6b7280">Violent</div></div></div></div>`).openOn(map);});
-      l.on('mouseout',()=>map.closePopup());
-    }
-  }));
-  const calMax=Math.max(...Object.values(CAL_CRIME).filter(v=>v>0))*0.6;
-  layers.push(L.geoJSON(CAL_GEO,{
-    style(f){const c=mode==='violent'?0:CAL_CRIME[f.properties.name]||0;return{fillColor:getCrimeColor(c,calMax),fillOpacity:c>0?0.55:0,color:'rgba(0,0,0,0.15)',weight:0.5,interactive:c>0};},
-    onEachFeature(f,l){
-      const nm=f.properties.name,ct=CAL_CRIME[nm]||0;if(!ct)return;
-      l.on('mouseover',e=>{L.popup({className:'',closeButton:false,offset:[0,-5]}).setLatLng(e.latlng).setContent(`<div style="background:#1f2937;border:1px solid #374151;padding:8px 11px;border-radius:7px;font-size:11px;color:#f9fafb;min-width:160px"><div style="font-weight:700;margin-bottom:3px">${nm}</div><div style="color:#9ca3af;font-size:9px">Calgary · 2024 annual</div><div style="margin-top:5px"><span style="font-size:16px;font-weight:700;color:#f87171">${ct.toLocaleString()}</span><div style="font-size:9px;color:#6b7280">Total reported</div></div></div>`).openOn(map);});
-      l.on('mouseout',()=>map.closePopup());
-    }
-  }));
-  crimeLayer=L.layerGroup(layers);crimeLayer.addTo(map);
-  crimeLayer.eachLayer(l=>l&&l.bringToBack&&l.bringToBack());clusterGroup.bringToFront();
+  const ed=mode==='violent'?EDM_VIOLENT:EDM_CRIME;
+  const em=Math.max(...Object.values(ed).filter(v=>v>0))*.6;
+  layers.push(L.geoJSON(EDM_GEO,{style(f){const c=ed[f.properties.name]||0;return{fillColor:getCrimeColor(c,em),fillOpacity:c>0?.55:0,color:'rgba(0,0,0,.15)',weight:.5,interactive:c>0};},onEachFeature(f,l){const nm=f.properties.name,tot=EDM_CRIME[nm]||0,vio=EDM_VIOLENT[nm]||0;if(!tot)return;l.on('mouseover',e=>{L.popup({className:'',closeButton:false,offset:[0,-5]}).setLatLng(e.latlng).setContent(`<div style="background:#1e293b;border:1px solid #334155;padding:8px 12px;border-radius:8px;font-size:11px;color:#f1f5f9;min-width:170px"><div style="font-weight:700;font-size:12px">${nm}</div><div style="color:#64748b;font-size:9px;margin-bottom:6px">Edmonton · 30-day incidents</div><div style="display:flex;gap:14px"><div><div style="font-size:18px;font-weight:800;color:#f87171">${tot.toLocaleString()}</div><div style="font-size:9px;color:#64748b">Total</div></div><div><div style="font-size:18px;font-weight:800;color:#fbbf24">${vio.toLocaleString()}</div><div style="font-size:9px;color:#64748b">Violent</div></div></div></div>`).openOn(map);});l.on('mouseout',()=>map.closePopup());}}));
+  const cm=Math.max(...Object.values(CAL_CRIME).filter(v=>v>0))*.6;
+  layers.push(L.geoJSON(CAL_GEO,{style(f){const c=mode==='violent'?0:CAL_CRIME[f.properties.name]||0;return{fillColor:getCrimeColor(c,cm),fillOpacity:c>0?.55:0,color:'rgba(0,0,0,.15)',weight:.5,interactive:c>0};},onEachFeature(f,l){const nm=f.properties.name,ct=CAL_CRIME[nm]||0;if(!ct)return;l.on('mouseover',e=>{L.popup({className:'',closeButton:false,offset:[0,-5]}).setLatLng(e.latlng).setContent(`<div style="background:#1e293b;border:1px solid #334155;padding:8px 12px;border-radius:8px;font-size:11px;color:#f1f5f9;min-width:170px"><div style="font-weight:700;font-size:12px">${nm}</div><div style="color:#64748b;font-size:9px;margin-bottom:6px">Calgary · 2024 annual</div><div style="font-size:18px;font-weight:800;color:#f87171">${ct.toLocaleString()}</div><div style="font-size:9px;color:#64748b">Total reported</div></div>`).openOn(map);});l.on('mouseout',()=>map.closePopup());}}));
+  crimeLayer=L.layerGroup(layers);crimeLayer.addTo(map);crimeLayer.eachLayer(l=>l&&l.bringToBack&&l.bringToBack());clusterGroup.bringToFront();
 }
-function setCrimeMode(mode){
-  crimeMode=mode;
-  ['total','violent','off'].forEach(m=>{const el=document.getElementById(`ctog-${m}`);if(el)el.classList.toggle('active',m===mode);});
-  buildCrimeLayer(mode);
-}
+function setCrimeMode(m){crimeMode=m;['total','violent','off'].forEach(x=>{const e=document.getElementById(`ctog-${x}`);if(e)e.classList.toggle('active',x===m);});buildCrimeLayer(m);}
 
 // ── Pods ──────────────────────────────────────────────────────────────────────
 function drawPods(){
   PODS.forEach(pod=>{
     if(pod.id>8)return;
-    const col=pod.color;
-    const circle=L.circle([pod.centroid[0],pod.centroid[1]],{radius:pod.radius*1000,color:col,weight:2,dashArray:'8,5',fillColor:col,fillOpacity:0.05,interactive:false});
-    const label=L.marker([pod.centroid[0],pod.centroid[1]],{icon:L.divIcon({html:`<div style="background:${col}cc;color:white;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;white-space:nowrap;border:1px solid ${col}">${pod.name}</div>`,className:'',iconAnchor:[38,10]}),interactive:false});
-    const members=PROPS.filter(p=>p.pod===pod.id);
-    podLayers[pod.id]={circle,label,members:members.length,vacant:members.reduce((s,p)=>s+p.vacant,0)};
+    const c=pod.color;
+    const circle=L.circle([pod.centroid[0],pod.centroid[1]],{radius:pod.radius*1000,color:c,weight:1.5,dashArray:'8,5',fillColor:c,fillOpacity:0.04,interactive:false});
+    const label=L.marker([pod.centroid[0],pod.centroid[1]],{icon:L.divIcon({html:`<div style="background:${c}cc;color:white;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:800;white-space:nowrap;border:1px solid ${c};letter-spacing:.02em">${pod.name}</div>`,className:'',iconAnchor:[38,10]}),interactive:false});
+    const mems=PROPS.filter(p=>p.pod===pod.id);
+    podLayers[pod.id]={circle,label,members:mems.length,vacant:mems.reduce((s,p)=>s+p.vacant,0)};
     podVisible[pod.id]=true;circle.addTo(map);label.addTo(map);
   });
 }
-function togglePod(id){
-  podVisible[id]=!podVisible[id];const l=podLayers[id];if(!l)return;
-  if(podVisible[id]){l.circle.addTo(map);l.label.addTo(map);}else{map.removeLayer(l.circle);map.removeLayer(l.label);}
-  renderPodList();
+function togglePod(id){podVisible[id]=!podVisible[id];const l=podLayers[id];if(!l)return;if(podVisible[id]){l.circle.addTo(map);l.label.addTo(map);}else{map.removeLayer(l.circle);map.removeLayer(l.label);}renderPodList();}
+
+// ── Auto-route (nearest-neighbour TSP) ───────────────────────────────────────
+function dist2(a,b){const dlat=a.lat-b.lat,dlng=a.lng-b.lng;return dlat*dlat+dlng*dlng;}
+function nearestNeighbour(points){
+  if(!points.length)return[];
+  const unvisited=[...points],route=[unvisited.splice(0,1)[0]];
+  while(unvisited.length){
+    const last=route[route.length-1];
+    let bi=0,bd=dist2(last,unvisited[0]);
+    for(let i=1;i<unvisited.length;i++){const d=dist2(last,unvisited[i]);if(d<bd){bd=d;bi=i;}}
+    route.push(unvisited.splice(bi,1)[0]);
+  }
+  return route;
 }
+function autoRoutePod(podId){
+  const mems=PROPS.filter(p=>p.pod===podId&&p.lat&&p.lng);
+  if(!mems.length){showToast('No properties in this pod');return;}
+  const ordered=nearestNeighbour(mems);
+  tour=ordered.map(p=>p.id);
+  PROPS.forEach(p=>refreshIcon(p));
+  renderList();renderTourPanel();scheduleRoute();
+  // Fly to pod
+  const pod=PODS.find(p=>p.id===podId);
+  if(pod)map.flyTo([pod.centroid[0],pod.centroid[1]],12,{duration:1});
+  switchTab('route');
+  showToast(`Route built: ${ordered.length} stops in ${podName(podId)}`);
+}
+function clearTour(){tour=[];PROPS.forEach(p=>refreshIcon(p));renderList();renderTourPanel();if(routeLayer){map.removeLayer(routeLayer);routeLayer=null;}lastLegs=[];}
 
 // ── Markers ───────────────────────────────────────────────────────────────────
 function makeIcon(p,inTour,tourIdx){
   const col=podColor(p.pod),vac=p.vacant;
-  if(inTour)return L.divIcon({html:`<div style="width:26px;height:26px;border-radius:50%;background:#1d4ed8;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;color:white;font-size:10px;font-weight:800">${tourIdx+1}</div>`,className:'',iconSize:[26,26],iconAnchor:[13,13]});
+  if(inTour)return L.divIcon({html:`<div style="width:26px;height:26px;border-radius:50%;background:#1d4ed8;border:2.5px solid white;box-shadow:0 2px 10px rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;color:white;font-size:10px;font-weight:800">${tourIdx+1}</div>`,className:'',iconSize:[26,26],iconAnchor:[13,13]});
+  const hasVac=vac>0;
   const size=p.units>200?20:p.units>50?16:p.units>20?14:11;
-  const badge=vac>0?`<div style="position:absolute;top:-5px;right:-5px;background:#dc2626;color:white;border-radius:8px;font-size:8px;font-weight:800;padding:0 3px;min-width:13px;text-align:center;border:1px solid #111;line-height:14px">${vac>99?'99+':vac}</div>`:'';
-  return L.divIcon({html:`<div style="position:relative"><div style="width:${size}px;height:${size}px;border-radius:50%;background:${col};border:${vac>0?'2px solid white':'1.5px solid rgba(255,255,255,.4)'};box-shadow:0 1px 5px rgba(0,0,0,.5)"></div>${badge}</div>`,className:'',iconSize:[size,size],iconAnchor:[size/2,size/2]});
+  const s2=hasVac?size+4:size;
+  const bg=hasVac?'#9d174d':col;
+  const border=hasVac?'2px solid #fda4af':'1.5px solid rgba(255,255,255,.3)';
+  const badge=vac>0?`<div style="position:absolute;top:-6px;right:-6px;background:#dc2626;color:white;border-radius:8px;font-size:8px;font-weight:800;padding:0 3px;min-width:14px;text-align:center;border:1.5px solid #0f172a;line-height:15px;box-shadow:0 1px 4px rgba(0,0,0,.5)">${vac>99?'99+':vac}</div>`:'';
+  return L.divIcon({html:`<div style="position:relative"><div style="width:${s2}px;height:${s2}px;border-radius:50%;background:${bg};border:${border};box-shadow:0 1px 6px rgba(0,0,0,.6)${hasVac?';box-shadow:0 0 0 3px rgba(157,23,77,.4),0 2px 8px rgba(0,0,0,.5)':''}"></div>${badge}</div>`,className:'',iconSize:[s2,s2],iconAnchor:[s2/2,s2/2]});
 }
 function buildPopup(p){
   const col=podColor(p.pod),pname=podName(p.pod),inTour=tour.includes(p.id);
-  const vacText=p.vacant>0?`<span class="tg t-vac">${p.vacant} vacant</span>`:'';
-  // Navigation URLs
   const gUrl=`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`;
   const aUrl=`https://maps.apple.com/?daddr=${p.lat},${p.lng}&dirflg=d`;
-  const appleBtn=isIOS?`<a class="ppnavbtn ppnavbtn-a" href="${aUrl}" target="_blank">🍎 Apple Maps</a>`:'';
+  const comm=commission();
+  const vacBlock=p.vacant>0?`<div class="ppvac">🔴 ${p.vacant} units available · Est. $${(p.vacant*comm).toLocaleString()} commission</div>`:'<div style="font-size:10px;color:#64748b;margin-bottom:6px">No vacancies on file</div>';
   return `<div class="ppname">${p.name}</div>
 <div class="ppaddr">${p.addr}</div>
-<div class="ppunits">${p.units} units · ${p.city}</div>
-<div class="pptags"><span class="tg t-pod" style="background:${col}cc">${pname}</span>${vacText}</div>
+<div class="ppunits">${p.units} total units · <span style="color:${podColor(p.pod)}">${pname}</span> · ${p.city}</div>
+${vacBlock}
 <div class="ppnav">
-  <a class="ppnavbtn ppnavbtn-g" href="${gUrl}" target="_blank">🗺 Google Maps</a>
-  ${appleBtn}
-  <button class="ppnavbtn ppnavbtn-add ${inTour?'added':''}" id="ppb-${p.id}">${inTour?'✓ In Tour':'+ Add to Tour'}</button>
+  <a class="ppnavbtn ppnavbtn-g" href="${gUrl}" target="_blank">🗺 Navigate</a>
+  ${isIOS?`<a class="ppnavbtn ppnavbtn-a" href="${aUrl}" target="_blank">🍎 Maps</a>`:''}
+  <button class="ppnavbtn ppnavbtn-add ${inTour?'added':''}" id="ppb-${p.id}">${inTour?'✓ In Route':'+ Add'}</button>
 </div>`;
 }
 function initMarker(p){
-  const m=L.marker([p.lat,p.lng],{icon:makeIcon(p,false,-1),zIndexOffset:100});
-  m.bindPopup(()=>buildPopup(p),{maxWidth:260,minWidth:210});
-  m.on('popupopen',()=>{setTimeout(()=>{const btn=document.getElementById(`ppb-${p.id}`);if(btn)btn.onclick=()=>{toggleTour(p.id);m.closePopup();};},30);});
+  const m=L.marker([p.lat,p.lng],{icon:makeIcon(p,false,-1),zIndexOffset:p.vacant>0?200:100});
+  m._propData=p;
+  m.bindPopup(()=>buildPopup(p),{maxWidth:270,minWidth:220});
+  m.on('popupopen',()=>{setTimeout(()=>{const b=document.getElementById(`ppb-${p.id}`);if(b)b.onclick=()=>{toggleTour(p.id);m.closePopup();};},30);});
   markers[p.id]=m;clusterGroup.addLayer(m);
 }
 function refreshIcon(p){const m=markers[p.id];if(!m)return;m.setIcon(makeIcon(p,tour.includes(p.id),tour.indexOf(p.id)));}
 
-// ── Navigation URLs ───────────────────────────────────────────────────────────
-function buildGoogleMapsRouteURL(){
-  const stops=tour.map(id=>PROPS.find(p=>p.id===id)).filter(p=>p&&p.lat&&p.lng);
-  if(!stops.length)return null;
-  const waypoints=stops.map(p=>`${p.lat},${p.lng}`).join('/');
-  return `https://www.google.com/maps/dir/${waypoints}`;
-}
-function buildAppleMapsURL(){
-  // Apple Maps supports single destination well; for multi-stop link to first stop with waypoints as text
-  const stops=tour.map(id=>PROPS.find(p=>p.id===id)).filter(p=>p&&p.lat&&p.lng);
-  if(!stops.length)return null;
-  if(stops.length===1)return `https://maps.apple.com/?daddr=${stops[0].lat},${stops[0].lng}&dirflg=d`;
-  // Multi-stop: open first, note we can't do true multi-stop in Apple Maps URLs
-  return `https://maps.apple.com/?daddr=${stops[0].lat},${stops[0].lng}&dirflg=d`;
-}
-function openGoogleMaps(){
-  const url=buildGoogleMapsRouteURL();
-  if(url){window.open(url,'_blank');showToast('Opening in Google Maps…');}
-}
-function openAppleMaps(){
-  const url=buildAppleMapsURL();
-  if(url){window.open(url,'_blank');showToast('Opening in Apple Maps…');}
-}
-function copyRouteLink(){
-  const url=buildGoogleMapsRouteURL();
-  if(!url)return;
-  navigator.clipboard.writeText(url).then(()=>{
-    const btn=document.getElementById('copy-btn');
-    btn.classList.add('copied');btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Copied!';
-    showToast('Route link copied to clipboard');
-    setTimeout(()=>{btn.classList.remove('copied');btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Copy Link';},3000);
-  }).catch(()=>{prompt('Copy this route link:',url);});
-}
-function showToast(msg){
-  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
-}
-
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function switchTab(t){
-  ['props','pods','crime'].forEach(x=>{
-    document.getElementById(`tab-${x}`).classList.toggle('active',x===t);
-    document.getElementById(`panel-${x}`).style.display=x===t?'flex':'none';
-  });
+  ['route','pods','crime'].forEach(x=>{document.getElementById(`tab-${x}`).classList.toggle('active',x===t);document.getElementById(`panel-${x}`).style.display=x===t?'flex':'none';});
 }
 
 // ── Pod Panel ─────────────────────────────────────────────────────────────────
 function renderPodList(){
   const el=document.getElementById('pod-list');
   const main=PODS.filter(p=>p.id<=8),out=PODS.filter(p=>p.id>8);
-  el.innerHTML=main.map(pod=>{
-    const vis=podVisible[pod.id]!==false,mems=PROPS.filter(p=>p.pod===pod.id);
-    const vac=mems.reduce((s,p)=>s+p.vacant,0),vc=vac>50?'cr':vac>10?'cy':'cg';
-    return `<div class="pod-row" onclick="flyToPod(${pod.id})">
-      <div class="pod-swatch" style="background:${pod.color}"></div>
-      <div class="pod-body"><div class="pod-name">${pod.name}</div>
-        <div class="pod-stats">${mems.length} properties · <span class="pod-vac ${vc}">${vac} vacant</span></div></div>
-      <div class="pod-toggle ${vis?'on':''}" onclick="event.stopPropagation();togglePod(${pod.id})">${vis?'Visible':'Hidden'}</div>
+  const renderPod=(pod,isOut)=>{
+    const mems=PROPS.filter(p=>p.pod===pod.id);
+    const vac=mems.reduce((s,p)=>s+p.vacant,0);
+    const vis=podVisible[pod.id]!==false;
+    const propItems=mems.slice(0,6).map(p=>`<div class="pod-prop-item" onclick="flyToProp(${p.id})">${p.name}<span class="pod-prop-vac">${p.vacant>0?p.vacant+'v':''}</span></div>`).join('');
+    const moreText=mems.length>6?`<div style="font-size:9px;color:#475569;padding:3px 0">+${mems.length-6} more</div>`:'';
+    return `<div class="pod-card">
+      <div class="pod-hdr" onclick="flyToPod(${pod.id})">
+        <div class="pod-swatch" style="background:${pod.color}"></div>
+        <div class="pod-body">
+          <div class="pod-name">${pod.name}</div>
+          <div class="pod-sub">${mems.length} properties · ${pod.radius}km radius</div>
+        </div>
+        <div class="pod-vac-badge ${vac===0?'none':''}">${vac>0?vac+' vacant':'No data'}</div>
+      </div>
+      <div class="pod-actions">
+        <button class="pod-act-btn pod-route-btn" onclick="autoRoutePod(${pod.id})">🗓 Auto-Route This Pod</button>
+        ${!isOut?`<button class="pod-act-btn pod-toggle-btn ${vis?'':'off'}" onclick="togglePod(${pod.id})">${vis?'👁 Visible':'○ Hidden'}</button>`:''}
+      </div>
+      <div class="pod-prop-list">${propItems}${moreText}</div>
     </div>`;
-  }).join('')+
-  (out.length?`<div style="padding:5px 12px 2px;font-size:9px;color:#4b5563;text-transform:uppercase;letter-spacing:.05em;font-weight:600;border-top:1px solid #374151;margin-top:3px">Out-of-City</div>`+
-  out.map(pod=>{const mems=PROPS.filter(p=>p.pod===pod.id);return `<div class="pod-row" onclick="flyToPodCoords(${JSON.stringify(pod.centroid)})">
-    <div class="pod-swatch" style="background:${pod.color}"></div>
-    <div class="pod-body"><div class="pod-name">${pod.name}</div>
-      <div class="pod-stats">${mems.length} properties · ${mems.reduce((s,p)=>s+p.vacant,0)} vacant</div></div>
-    <div class="pod-toggle" style="color:#4b5563;font-size:8px">out-of-city</div>
-  </div>`;}).join(''):'');
+  };
+  el.innerHTML=`<div style="padding:6px 8px 2px;font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Edmonton & Calgary Pods</div>`+
+  main.map(p=>renderPod(p,false)).join('')+
+  `<div style="padding:6px 8px 2px;font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:4px">Out-of-City</div>`+
+  out.map(p=>renderPod(p,true)).join('');
 }
 function flyToPod(id){const p=PODS.find(x=>x.id===id);if(p)map.flyTo([p.centroid[0],p.centroid[1]],12,{duration:1});}
-function flyToPodCoords(c){map.flyTo([c[0],c[1]],12,{duration:1});}
+function flyToProp(id){const p=PROPS.find(x=>x.id===id);if(p){map.flyTo([p.lat,p.lng],15,{duration:.8});setTimeout(()=>markers[id]&&markers[id].openPopup(),900);}}
 
 // ── Property List ─────────────────────────────────────────────────────────────
 function renderList(){
   const srch=document.getElementById('srch').value.toLowerCase();
-  const filtered=PROPS.filter(p=>{
+  const sort=document.getElementById('sort-select').value;
+  let filtered=PROPS.filter(p=>{
     const cok=currentCity==='all'||(currentCity==='other'?(p.city!=='Edmonton'&&p.city!=='Calgary'):p.city===currentCity);
     return cok&&(!vacantOnly||p.vacant>0)&&(!srch||p.name.toLowerCase().includes(srch)||p.addr.toLowerCase().includes(srch));
   });
+  if(sort==='vac')filtered.sort((a,b)=>b.vacant-a.vacant||b.units-a.units);
+  else if(sort==='units')filtered.sort((a,b)=>b.units-a.units);
+  else filtered.sort((a,b)=>a.name.localeCompare(b.name));
+  const comm=commission();
   document.getElementById('prop-list').innerHTML=filtered.map(p=>`
-    <div class="pi ${tour.includes(p.id)?'in-tour':''}" onclick="toggleTour(${p.id})">
-      <div class="pdot" style="background:${podColor(p.pod)}"></div>
+    <div class="pi ${tour.includes(p.id)?'in-tour':''} ${p.vacant>0?'has-vac':''}" onclick="toggleTour(${p.id})">
+      <div class="pdot" style="background:${p.vacant>0?'#fda4af':podColor(p.pod)}"></div>
       <div class="pb">
         <div class="pn">${p.name}</div>
-        <div class="pa">${p.addr} · ${p.units}u</div>
+        <div class="pa">${p.addr} · ${p.city}</div>
         <div class="ptags">
-          <span class="tg t-pod" style="background:${podColor(p.pod)}cc;color:white">${podName(p.pod)}</span>
-          ${p.vacant>0?`<span class="tg t-vac">${p.vacant} vacant</span>`:''}
+          <span class="tg t-pod" style="background:${podColor(p.pod)}cc">${podName(p.pod)}</span>
+          <span class="tg t-units">${p.units}u</span>
+          ${p.vacant>0?`<span class="tg t-vac">🔴 ${p.vacant} vacant · $${(p.vacant*comm).toLocaleString()}</span>`:''}
         </div>
       </div>
       <div class="chk"></div>
@@ -418,53 +483,34 @@ function renderList(){
 }
 
 // ── Tour ──────────────────────────────────────────────────────────────────────
-function toggleTour(id){
-  tour=tour.includes(id)?tour.filter(x=>x!==id):[...tour,id];
-  PROPS.forEach(p=>refreshIcon(p));renderList();renderTourPanel();scheduleRoute();
-}
-function removeTourStop(id){
-  tour=tour.filter(x=>x!==id);PROPS.forEach(p=>refreshIcon(p));renderList();renderTourPanel();scheduleRoute();
-}
+function toggleTour(id){tour=tour.includes(id)?tour.filter(x=>x!==id):[...tour,id];PROPS.forEach(p=>refreshIcon(p));renderList();renderTourPanel();scheduleRoute();}
+function removeTourStop(id){tour=tour.filter(x=>x!==id);PROPS.forEach(p=>refreshIcon(p));renderList();renderTourPanel();scheduleRoute();}
 function scheduleRoute(){clearTimeout(routeDebounce);routeDebounce=setTimeout(fetchRoute,700);}
 async function fetchRoute(){
   if(routeLayer){map.removeLayer(routeLayer);routeLayer=null;}
   const stops=tour.map(id=>PROPS.find(p=>p.id===id)).filter(p=>p&&p.lat&&p.lng);
   if(stops.length<2){renderTourLegs([]);return;}
-  const coords=stops.map(p=>`${p.lng},${p.lat}`).join(';');
   try{
-    const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
+    const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${stops.map(p=>`${p.lng},${p.lat}`).join(';')}?overview=full&geometries=geojson`);
     const d=await r.json();
     if(d.code==='Ok'&&d.routes[0]){
-      routeLayer=L.geoJSON(d.routes[0].geometry,{style:{color:'#3b82f6',weight:3,opacity:.8,dashArray:'6,4'}}).addTo(map);
-      await fetchLegTimes(stops);
+      routeLayer=L.geoJSON(d.routes[0].geometry,{style:{color:'#3b82f6',weight:3,opacity:.85,dashArray:'8,4'}}).addTo(map);
+      const r2=await fetch(`https://router.project-osrm.org/table/v1/driving/${stops.map(p=>`${p.lng},${p.lat}`).join(';')}?annotations=duration,distance`);
+      const d2=await r2.json();
+      if(d2.code==='Ok'){const legs=[];for(let i=0;i<stops.length-1;i++)legs.push({km:Math.round(d2.distances[i][i+1]/100)/10,mins:Math.round(d2.durations[i][i+1]/60)});renderTourLegs(legs);}
     }
-  }catch(e){renderTourLegs(stops.map((s,i)=>{if(!i)return null;const km=haversine(stops[i-1],s);return{km:Math.round(km*10)/10,mins:Math.round(km/0.55)};}).filter(Boolean));}
-}
-async function fetchLegTimes(stops){
-  try{
-    const r=await fetch(`https://router.project-osrm.org/table/v1/driving/${stops.map(p=>`${p.lng},${p.lat}`).join(';')}?annotations=duration,distance`);
-    const d=await r.json();
-    if(d.code==='Ok'){
-      const legs=[];for(let i=0;i<stops.length-1;i++)legs.push({km:Math.round(d.distances[i][i+1]/100)/10,mins:Math.round(d.durations[i][i+1]/60)});
-      renderTourLegs(legs);
-    }
-  }catch(e){}
-}
-function haversine(a,b){
-  const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;
-  const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+  }catch(e){renderTourLegs([]);}
 }
 function renderTourLegs(legs){lastLegs=legs||[];renderTourStops(lastLegs);}
 function renderTourPanel(){
-  const badge=document.getElementById('tour-badge');
-  badge.textContent=`${tour.length} stop${tour.length!==1?'s':''}`;
+  const n=tour.length;
+  document.getElementById('tour-badge').textContent=`${n} stop${n!==1?'s':''}`;
+  document.getElementById('clear-tour').style.display=n>0?'block':'none';
   const navBtns=document.getElementById('nav-buttons');
-  const appleBtn=document.getElementById('apple-btn');
-  if(!tour.length){
+  if(!n){
     document.getElementById('tour-empty').style.display='block';
     document.getElementById('tour-stops').innerHTML='';
-    document.getElementById('tour-footer').style.display='none';
+    document.getElementById('tour-stats').style.display='none';
     document.getElementById('feasibility').textContent='';
     document.getElementById('feasibility').className='';
     navBtns.style.display='none';
@@ -472,37 +518,62 @@ function renderTourPanel(){
   }
   document.getElementById('tour-empty').style.display='none';
   navBtns.style.display='flex';
-  if(isIOS&&appleBtn)appleBtn.style.display='flex';
   renderTourStops(lastLegs);
 }
 function renderTourStops(legs){
   if(!tour.length)return;
+  const comm=commission();
   document.getElementById('tour-stops').innerHTML=tour.map((id,i)=>{
     const p=PROPS.find(x=>x.id===id);if(!p)return '';
     const leg=legs[i-1];
-    return `<div class="sr"><div class="sn">${i+1}</div><div class="sb">
-      <div class="sname">${p.name}</div>
-      ${i>0?`<div class="sleg ${leg&&leg.mins>30?'long':''}">${leg?`${leg.mins} min · ${leg.km} km`:'Calculating…'}</div>`:''}
-    </div><div class="srm" onclick="removeTourStop(${id})">×</div></div>`;
+    const vacStr=p.vacant>0?`<span class="svac">🔴 ${p.vacant} vacant</span>`:'';
+    return `<div class="sr">
+      <div class="sn">${i+1}</div>
+      <div class="sb">
+        <div class="sname">${p.name}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:1px">
+          ${i>0?`<div class="sleg ${leg&&leg.mins>30?'long':''}">${leg?leg.mins+'min · '+leg.km+'km':'…'}</div>`:'<div class="sleg" style="color:#64748b">Start</div>'}
+          ${vacStr}
+        </div>
+      </div>
+      <div class="srm" onclick="removeTourStop(${id})">×</div>
+    </div>`;
   }).join('');
   const totalDrive=legs.reduce((s,l)=>s+(l.mins||0),0);
   const maxLeg=legs.length?Math.max(...legs.map(l=>l.mins||0)):0;
+  const totalVac=tour.map(id=>PROPS.find(p=>p.id===id)).filter(Boolean).reduce((s,p)=>s+p.vacant,0);
   const tm=totalDrive+tour.length*45,h=Math.floor(tm/60),m=tm%60;
-  const dc=totalDrive>150?'cr':totalDrive>90?'cy':'cg',mc=maxLeg>40?'cr':maxLeg>25?'cy':'cg';
-  document.getElementById('tour-footer').style.display='flex';
-  document.getElementById('tour-footer').innerHTML=`
-    <div class="stat"><div class="sv ${dc}">${totalDrive>0?totalDrive+'m':'—'}</div><div class="sl">Drive</div></div>
+  const dc=totalDrive>150?'cr':totalDrive>90?'cy':'cg';
+  const mc=maxLeg>40?'cr':maxLeg>25?'cy':'cg';
+  const earn=totalVac*commission();
+  document.getElementById('tour-stats').style.display='flex';
+  document.getElementById('tour-stats').innerHTML=`
+    <div class="stat"><div class="sv ${dc}">${totalDrive>0?totalDrive+'m':'—'}</div><div class="sl">Drive Time</div></div>
     <div class="stat"><div class="sv ${mc}">${maxLeg>0?maxLeg+'m':'—'}</div><div class="sl">Longest Leg</div></div>
-    <div class="stat"><div class="sv cb">${totalDrive>0?h+'h '+m+'m':'—'}</div><div class="sl">Full Day Est.</div></div>
-    <div class="stat"><div class="sv cb">${tour.length}</div><div class="sl">Stops</div></div>`;
+    <div class="stat"><div class="sv cb">${h>0?h+'h ':''}${m>0?m+'m':'—'}</div><div class="sl">Total Day</div></div>
+    <div class="stat"><div class="sv ${totalVac>0?'cp':'cb'}">${totalVac>0?totalVac:'—'}</div><div class="sl">Vacant</div></div>
+    ${earn>0?`<div class="stat"><div class="sv cg">$${earn>=1000?(earn/1000).toFixed(1)+'k':earn}</div><div class="sl">Est. Earn</div></div>`:''}`;
   const fEl=document.getElementById('feasibility');
   if(tour.length<2||totalDrive===0){fEl.textContent='';fEl.className='';}
-  else if(totalDrive>150||maxLeg>40){fEl.textContent='⚠ Over capacity — reduce stops or split days';fEl.className='fr';}
-  else if(totalDrive>90||maxLeg>25){fEl.textContent='⚡ Tight but doable — allow buffer time';fEl.className='fy';}
-  else{fEl.textContent='✓ Feasible day — great coverage';fEl.className='fg';}
+  else if(totalDrive>150||maxLeg>40){fEl.textContent='⚠ Over capacity — split across two days';fEl.className='fr';}
+  else if(totalDrive>90||maxLeg>25){fEl.textContent='⚡ Tight — allow buffer time between stops';fEl.className='fy';}
+  else{fEl.textContent='✓ Efficient route — great coverage day';fEl.className='fg';}
   const pts=tour.map(id=>PROPS.find(p=>p.id===id)).filter(p=>p&&p.lat&&p.lng);
   if(pts.length>=2)map.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lng])),{padding:[40,40]});
 }
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function buildRouteURL(){const s=tour.map(id=>PROPS.find(p=>p.id===id)).filter(p=>p&&p.lat&&p.lng);if(!s.length)return null;return `https://www.google.com/maps/dir/${s.map(p=>`${p.lat},${p.lng}`).join('/')}`;}
+function openGoogleMaps(){const u=buildRouteURL();if(u){window.open(u,'_blank');showToast('Opening route in Google Maps…');}}
+function copyRouteLink(){
+  const u=buildRouteURL();if(!u)return;
+  navigator.clipboard.writeText(u).then(()=>{
+    const b=document.getElementById('copy-btn');b.classList.add('copied');b.innerHTML='✓ Copied!';
+    showToast('Route link copied — share with your agent');
+    setTimeout(()=>{b.classList.remove('copied');b.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Copy Link';},3000);
+  }).catch(()=>prompt('Copy this link:',u));
+}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
 
 // ── Filters ───────────────────────────────────────────────────────────────────
 document.querySelectorAll('.fb').forEach(btn=>{
@@ -511,7 +582,7 @@ document.querySelectorAll('.fb').forEach(btn=>{
     else{document.querySelectorAll('.fb:not([data-vac])').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentCity=btn.dataset.city;
       if(currentCity==='Edmonton')map.flyTo([53.5461,-113.4938],11,{duration:.8});
       else if(currentCity==='Calgary')map.flyTo([51.0447,-114.0719],11,{duration:.8});
-      else if(currentCity==='all')map.flyTo([53.5461,-113.4938],9,{duration:.8});
+      else map.flyTo([53.5461,-113.4938],9,{duration:.8});
     }
     renderList();
   });
@@ -522,11 +593,11 @@ document.getElementById('srch').addEventListener('input',renderList);
 const legend=L.control({position:'bottomleft'});
 legend.onAdd=()=>{
   const div=L.DomUtil.create('div');
-  div.style.cssText='background:#1f2937;border:1px solid #374151;padding:7px 10px;border-radius:7px;font-size:9px;color:#e5e7eb;line-height:1.9;box-shadow:0 2px 8px rgba(0,0,0,.4)';
-  div.innerHTML='<div style="font-weight:700;margin-bottom:3px;color:#9ca3af;letter-spacing:.04em">PODS</div>'+
+  div.style.cssText='background:#1e293b;border:1px solid #334155;padding:8px 10px;border-radius:8px;font-size:9px;color:#e2e8f0;line-height:2;box-shadow:0 2px 12px rgba(0,0,0,.5)';
+  div.innerHTML='<div style="font-weight:800;margin-bottom:2px;color:#64748b;letter-spacing:.05em;font-size:8px">PODS — CLICK TO NAVIGATE</div>'+
     PODS.filter(p=>p.id<=8).map(p=>{
       const mems=PROPS.filter(x=>x.pod===p.id),vac=mems.reduce((s,x)=>s+x.vacant,0);
-      return `<div style="cursor:pointer" onclick="flyToPod(${p.id})"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${p.color};margin-right:4px;vertical-align:middle"></span>${p.name}<span style="color:#6b7280"> (${mems.length})</span>${vac>0?` <span style="color:#f87171">${vac}v</span>`:''}</div>`;
+      return `<div style="cursor:pointer;display:flex;align-items:center;gap:5px" onclick="autoRoutePod(${p.id})"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color}"></span><span>${p.name}</span><span style="color:#475569">(${mems.length})</span>${vac>0?`<span style="color:#fda4af;font-weight:700">${vac}v</span>`:''}<span style="color:#334155">→ route</span></div>`;
     }).join('');
   return div;
 };
@@ -537,6 +608,7 @@ drawPods();
 PROPS.forEach(p=>initMarker(p));
 renderList();renderPodList();
 buildCrimeLayer('total');
+updateStats();
 </script>
 </body>
 </html>
