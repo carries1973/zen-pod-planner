@@ -31,12 +31,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:
 #panel-route,#panel-pods,#panel-crime{display:flex;flex-direction:column;flex:1;overflow:hidden}
 /* ── Route Panel ── */
 #route-inner{flex:1;overflow-y:auto;padding:0}
-/* Commission bar */
-#commission-bar{padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
-#commission-bar label{font-size:10px;color:var(--muted);white-space:nowrap}
-#commission-input{width:80px;padding:4px 7px;background:var(--card);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;font-weight:600;outline:none}
-#commission-input:focus{border-color:var(--blue)}
-#comm-unit{font-size:10px;color:var(--muted)}
+#sort-bar{padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
 /* Search + filter */
 #route-filters{padding:7px 10px;border-bottom:1px solid var(--border);display:flex;gap:4px;flex-wrap:wrap}
 .fb{padding:3px 9px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;transition:all .15s;white-space:nowrap}
@@ -180,7 +175,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:
       <div class="pstat"><div class="pstat-val" id="stat-props">82</div><div class="pstat-lbl">Properties</div></div>
       <div class="pstat"><div class="pstat-val green" id="stat-vac">—</div><div class="pstat-lbl">Vacant Now</div></div>
       <div class="pstat"><div class="pstat-val yellow" id="stat-units">6,284</div><div class="pstat-lbl">Total Units</div></div>
-      <div class="pstat"><div class="pstat-val cp" id="stat-earn">—</div><div class="pstat-lbl">Est. Earnings</div></div>
     </div>
   </div>
   <div id="tabs">
@@ -191,11 +185,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:
 
   <!-- ROUTE TAB -->
   <div id="panel-route">
-    <div id="commission-bar">
-      <label>Commission per lease:</label>
-      <span style="color:var(--muted);font-size:11px">$</span>
-      <input id="commission-input" type="number" value="500" min="0" step="50" oninput="updateStats()"/>
-      <span id="comm-unit">/lease</span>
+    <div id="sort-bar">
       <div style="flex:1"></div>
       <select id="sort-select" style="background:var(--card);border:1px solid var(--border);color:var(--text);font-size:10px;padding:3px 6px;border-radius:5px;outline:none" onchange="renderList()">
         <option value="vac">Vacancy ↓</option>
@@ -296,14 +286,11 @@ let routeDebounce,lastLegs=[];
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
 const podColor=id=>{const p=PODS.find(x=>x.id===id);return p?p.color:'#64748b';};
 const podName=id=>{const p=PODS.find(x=>x.id===id);return p?p.name:`Pod ${id}`;};
-const commission=()=>parseInt(document.getElementById('commission-input')?.value||500)||500;
 
 // ── Portfolio stats ───────────────────────────────────────────────────────────
 function updateStats(){
   const totalVac=PROPS.reduce((s,p)=>s+p.vacant,0);
-  const comm=commission();
   document.getElementById('stat-vac').textContent=totalVac>0?totalVac:'—';
-  document.getElementById('stat-earn').textContent=totalVac>0?'$'+(totalVac*comm).toLocaleString():'—';
 }
 
 // ── Map ───────────────────────────────────────────────────────────────────────
@@ -394,8 +381,7 @@ function buildPopup(p){
   const col=podColor(p.pod),pname=podName(p.pod),inTour=tour.includes(p.id);
   const gUrl=`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`;
   const aUrl=`https://maps.apple.com/?daddr=${p.lat},${p.lng}&dirflg=d`;
-  const comm=commission();
-  const vacBlock=p.vacant>0?`<div class="ppvac">🔴 ${p.vacant} units available · Est. $${(p.vacant*comm).toLocaleString()} commission</div>`:'<div style="font-size:10px;color:#64748b;margin-bottom:6px">No vacancies on file</div>';
+  const vacBlock=p.vacant>0?`<div class="ppvac">🔴 ${p.vacant} units available</div>`:'<div style="font-size:10px;color:#64748b;margin-bottom:6px">No vacancies on file</div>';
   return `<div class="ppname">${p.name}</div>
 <div class="ppaddr">${p.addr}</div>
 <div class="ppunits">${p.units} total units · <span style="color:${podColor(p.pod)}">${pname}</span> · ${p.city}</div>
@@ -465,7 +451,6 @@ function renderList(){
   if(sort==='vac')filtered.sort((a,b)=>b.vacant-a.vacant||b.units-a.units);
   else if(sort==='units')filtered.sort((a,b)=>b.units-a.units);
   else filtered.sort((a,b)=>a.name.localeCompare(b.name));
-  const comm=commission();
   document.getElementById('prop-list').innerHTML=filtered.map(p=>`
     <div class="pi ${tour.includes(p.id)?'in-tour':''} ${p.vacant>0?'has-vac':''}" onclick="toggleTour(${p.id})">
       <div class="pdot" style="background:${p.vacant>0?'#fda4af':podColor(p.pod)}"></div>
@@ -475,7 +460,7 @@ function renderList(){
         <div class="ptags">
           <span class="tg t-pod" style="background:${podColor(p.pod)}cc">${podName(p.pod)}</span>
           <span class="tg t-units">${p.units}u</span>
-          ${p.vacant>0?`<span class="tg t-vac">🔴 ${p.vacant} vacant · $${(p.vacant*comm).toLocaleString()}</span>`:''}
+          ${p.vacant>0?`<span class="tg t-vac">🔴 ${p.vacant} vacant</span>`:''}
         </div>
       </div>
       <div class="chk"></div>
@@ -522,7 +507,6 @@ function renderTourPanel(){
 }
 function renderTourStops(legs){
   if(!tour.length)return;
-  const comm=commission();
   document.getElementById('tour-stops').innerHTML=tour.map((id,i)=>{
     const p=PROPS.find(x=>x.id===id);if(!p)return '';
     const leg=legs[i-1];
@@ -545,14 +529,12 @@ function renderTourStops(legs){
   const tm=totalDrive+tour.length*45,h=Math.floor(tm/60),m=tm%60;
   const dc=totalDrive>150?'cr':totalDrive>90?'cy':'cg';
   const mc=maxLeg>40?'cr':maxLeg>25?'cy':'cg';
-  const earn=totalVac*commission();
   document.getElementById('tour-stats').style.display='flex';
   document.getElementById('tour-stats').innerHTML=`
     <div class="stat"><div class="sv ${dc}">${totalDrive>0?totalDrive+'m':'—'}</div><div class="sl">Drive Time</div></div>
     <div class="stat"><div class="sv ${mc}">${maxLeg>0?maxLeg+'m':'—'}</div><div class="sl">Longest Leg</div></div>
     <div class="stat"><div class="sv cb">${h>0?h+'h ':''}${m>0?m+'m':'—'}</div><div class="sl">Total Day</div></div>
-    <div class="stat"><div class="sv ${totalVac>0?'cp':'cb'}">${totalVac>0?totalVac:'—'}</div><div class="sl">Vacant</div></div>
-    ${earn>0?`<div class="stat"><div class="sv cg">$${earn>=1000?(earn/1000).toFixed(1)+'k':earn}</div><div class="sl">Est. Earn</div></div>`:''}`;
+    <div class="stat"><div class="sv ${totalVac>0?'cp':'cb'}">${totalVac>0?totalVac:'—'}</div><div class="sl">Vacant</div></div>`;
   const fEl=document.getElementById('feasibility');
   if(tour.length<2||totalDrive===0){fEl.textContent='';fEl.className='';}
   else if(totalDrive>150||maxLeg>40){fEl.textContent='⚠ Over capacity — split across two days';fEl.className='fr';}
