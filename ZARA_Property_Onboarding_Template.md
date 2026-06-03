@@ -7,11 +7,11 @@
 
 ## TABLE OF CONTENTS
 
-- [Section 0 — GHL & System Configuration](#section-0--ghl--system-configuration) ← **Do first**
+- [Section 0 — GHL & System Configuration](#section-0--ghl--system-configuration)
 - [Section 1 — Property Identity](#section-1--property-identity)
 - [Section 2 — Contact & Phone Routing](#section-2--contact--phone-routing)
 - [Section 3 — Marketing Identity & SEO](#section-3--marketing-identity--seo)
-- [Section 4 — Advertising Platform Syndication](#section-4--advertising-platform-syndication) ← **New**
+- [Section 4 — Advertising Platform Syndication](#section-4--advertising-platform-syndication)
 - [Section 5 — Office Hours](#section-5--office-hours)
 - [Section 6 — Suite Types & Availability](#section-6--suite-types--availability)
 - [Section 7 — What's Included in Rent](#section-7--whats-included-in-rent)
@@ -25,12 +25,10 @@
 - [Section 15 — Neighbourhood & Location](#section-15--neighbourhood--location)
 - [Section 16 — Building Rules & Policies](#section-16--building-rules--policies)
 - [Section 17 — Incentives & Promotions](#section-17--incentives--promotions)
-- [Section 18 — Photos & Visual Media](#section-18--photos--visual-media) ← **New**
+- [Section 18 — Photos & Visual Media](#section-18--photos--visual-media)
 - [Section 19 — Escalation](#section-19--escalation)
 - [Section 20 — Brand & Tone](#section-20--brand--tone)
 - [System Notes for Onboarder](#system-notes-for-onboarder)
-
----
 
 ---
 
@@ -199,8 +197,6 @@ BRIEFING_GMAIL_PASS=             # Google App Password — 16 chars, NOT account
 
 ---
 
----
-
 ## SECTION 1 — Property Identity
 
 **Property Name:** _______________________________________________
@@ -225,12 +221,23 @@ BRIEFING_GMAIL_PASS=             # Google App Password — 16 chars, NOT account
 Apartment · Condo · Duplex/Triplex · Townhouse · Loft · Home
 
 **Specialty / Geographic Classification** *(check all that apply — Yardi Marketing Type → Specialty)*:
-□ Affordable  □ Student  □ City Centre Calgary  □ Central Edmonton  □ Downtown Edmonton
-□ East/North/South/West Calgary  □ East/North/South/West Edmonton
-□ Sherwood Park  □ St. Albert  □ Saskatchewan  □ None
+- [ ] Affordable
+- [ ] Student
+- [ ] City Centre Calgary
+- [ ] Central Edmonton
+- [ ] Downtown Edmonton
+- [ ] East/North/South/West Calgary
+- [ ] East/North/South/West Edmonton
+- [ ] Sherwood Park
+- [ ] St. Albert
+- [ ] Saskatchewan
+- [ ] None
 
 **Housing Types** *(Rentsync multi-select — affects which listing channels the property is published to)*:
-□ Conventional Rental / Family Housing  □ Student Housing  □ Senior Housing  □ Military/Veteran Housing
+- [ ] Conventional Rental / Family Housing
+- [ ] Student Housing
+- [ ] Senior Housing
+- [ ] Military/Veteran Housing
 
 **Property Classification** *(circle one)*:  A  ·  B  ·  C
 
@@ -321,13 +328,21 @@ _______________________________________________
 *(Check all platforms to publish to. Rentsync syndicates automatically once activated. Confirm availability for this property's city/type before enabling.)*
 
 **Primary Platforms:**
-□ Kijiji  □ Rentals.ca  □ Zumper  □ Padmapper  □ ViewIt  □ Liv.rent
-□ Facebook Marketplace *(via Rentsync integration)*
-□ RentCafe ILS *(Yardi — separate setup)*
+- [ ] Kijiji
+- [ ] Rentals.ca
+- [ ] Zumper
+- [ ] Padmapper
+- [ ] ViewIt
+- [ ] Liv.rent
+- [ ] Facebook Marketplace *(via Rentsync integration)*
+- [ ] RentCafe ILS *(Yardi — separate setup)*
 
 **Secondary / Niche:**
-□ Gottarent  □ RentBoard  □ Point2 Homes  □ HotPads
-□ Other: _______________________________________________
+- [ ] Gottarent
+- [ ] RentBoard
+- [ ] Point2 Homes
+- [ ] HotPads
+- [ ] Other: _______________________________________________
 
 **Do NOT activate** *(note any platforms to exclude for this property)*: _______________________________________________
 
@@ -420,7 +435,11 @@ None · Half Month's Rent · One Month's Rent · Two Months' Rent · Other: ____
 
 *(Dollar amounts go in Yardi — see Section 13 Application Process)*
 
-**Unit Features:**  □ Luxury  □ Executive  □ Waterfront
+**Unit Features:**
+
+- [ ] Luxury
+- [ ] Executive
+- [ ] Waterfront
 
 **Renovation Status** *(default)*: Ready · Under Repair · To Be Assessed · To Be Repaired
 
@@ -429,7 +448,13 @@ None · Half Month's Rent · One Month's Rent · Two Months' Rent · Other: ____
 ---
 
 **Lease Terms Available:**
-□ 1 mo  □ 2 mo  □ 3 mo  □ 6 mo  □ 9 mo  □ 12 mo  □ Other: _______
+- [ ] 1 mo
+- [ ] 2 mo
+- [ ] 3 mo
+- [ ] 6 mo
+- [ ] 9 mo
+- [ ] 12 mo
+- [ ] Other: _______
 
 **Default Lease Term:** _______________________________________________
 
@@ -458,11 +483,25 @@ None · Half Month's Rent · One Month's Rent · Two Months' Rent · Other: ____
 
 *If Yes, check all that apply:*
 
-**Basic Utilities:**  □ Heat  □ Water  □ Electricity  □ Gas  □ Sewage  □ Garbage Collection
+**Basic Utilities:**
 
-**Ancillary:**  □ Internet  □ Cable  □ Phone
+- [ ] Heat
+- [ ] Water
+- [ ] Electricity
+- [ ] Gas
+- [ ] Sewage
+- [ ] Garbage Collection
 
-**Other:**  □ Recycling  □ On-site laundry access
+**Ancillary:**
+
+- [ ] Internet
+- [ ] Cable
+- [ ] Phone
+
+**Other:**
+
+- [ ] Recycling
+- [ ] On-site laundry access
 
 **Tenant pays separately:** _______________________________________________
 
@@ -476,7 +515,11 @@ None · Half Month's Rent · One Month's Rent · Two Months' Rent · Other: ____
 In-suite washer/dryer · In-suite hookups only · Shared laundry room (coin) · Shared laundry room (card) · No laundry on site
 
 **Amenity Mapping** *(check all that apply)*:
-□ Washer in suite  □ Dryer in suite  □ W/D Hookups only  □ Dishwasher  □ Laundry facilities (shared)
+- [ ] Washer in suite
+- [ ] Dryer in suite
+- [ ] W/D Hookups only
+- [ ] Dishwasher
+- [ ] Laundry facilities (shared)
 
 **Cost per load** *(if shared)*: $_______
 
@@ -546,7 +589,11 @@ Yardi *(circle)*: Dogs Allowed · Cats Allowed · Pet Friendly · Not Allowed
 | Small Dogs | Y · N | $_______ | $_______ | $_______ | ≤_____ lbs | _______ |
 | Large Dogs | Y · N | $_______ | $_______ | $_______ | ≤_____ lbs | _______ |
 
-**Rentsync Pet Checkboxes:**  □ Cats  □ Small Dogs  □ Large Dogs
+**Rentsync Pet Checkboxes:**
+
+- [ ] Cats
+- [ ] Small Dogs
+- [ ] Large Dogs
 
 **Max pets per unit:** _______
 
@@ -562,47 +609,110 @@ _______________________________________________
 
 **Community / Property Amenities:**
 
-□ Fitness centre / gym  □ Free weights  □ Group exercise / yoga classes
-□ Pool  □ Hot tub / spa  □ Sauna  □ Steam room
-□ Outdoor patio / courtyard  □ BBQ / picnic area  □ Rooftop terrace  □ Sundeck
-□ Party / events room  □ Recreation room  □ Clubhouse
-□ Co-working / study lounge  □ Business centre  □ Media room  □ Library  □ Guest suite
-□ Concierge / front desk  □ 24/7 concierge  □ 24/7 emergency service  □ Door attendant
-□ On-site management  □ On-site maintenance
-□ Night patrol / security staff  □ Security cameras / surveillance
-□ Security fob / controlled access  □ Keyless entry
-□ Elevator  □ Accessible units available
-□ Bike storage  □ Package lockers *(brand)*: _______________________
-□ EV charging stations
-□ Dog wash station  □ Dog run / off-leash area
-□ Playground  □ Child care
-□ Recycling  □ Green building certification  □ Historic designation
-□ Visitor parking  □ Covered parking  □ Off-street parking  □ Garage
-□ Short-term lease available  □ Furnished units available
-□ High-speed internet in common areas
-□ Basketball court  □ Tennis court  □ Volleyball court  □ Racquetball court
-□ Meal service  □ Housekeeping service  □ Club discount program
-□ Other: _______________________________________________
+- [ ] Fitness centre / gym
+- [ ] Free weights
+- [ ] Group exercise / yoga classes
+- [ ] Pool
+- [ ] Hot tub / spa
+- [ ] Sauna
+- [ ] Steam room
+- [ ] Outdoor patio / courtyard
+- [ ] BBQ / picnic area
+- [ ] Rooftop terrace
+- [ ] Sundeck
+- [ ] Party / events room
+- [ ] Recreation room
+- [ ] Clubhouse
+- [ ] Co-working / study lounge
+- [ ] Business centre
+- [ ] Media room
+- [ ] Library
+- [ ] Guest suite
+- [ ] Concierge / front desk
+- [ ] 24/7 concierge
+- [ ] 24/7 emergency service
+- [ ] Door attendant
+- [ ] On-site management
+- [ ] On-site maintenance
+- [ ] Night patrol / security staff
+- [ ] Security cameras / surveillance
+- [ ] Security fob / controlled access
+- [ ] Keyless entry
+- [ ] Elevator
+- [ ] Accessible units available
+- [ ] Bike storage
+- [ ] Package lockers *(brand)*: _______________________
+- [ ] EV charging stations
+- [ ] Dog wash station
+- [ ] Dog run / off-leash area
+- [ ] Playground
+- [ ] Child care
+- [ ] Recycling
+- [ ] Green building certification
+- [ ] Historic designation
+- [ ] Visitor parking
+- [ ] Covered parking
+- [ ] Off-street parking
+- [ ] Garage
+- [ ] Short-term lease available
+- [ ] Furnished units available
+- [ ] High-speed internet in common areas
+- [ ] Basketball court
+- [ ] Tennis court
+- [ ] Volleyball court
+- [ ] Racquetball court
+- [ ] Meal service
+- [ ] Housekeeping service
+- [ ] Club discount program
+- [ ] Other: _______________________________________________
 
 **Nearby Amenities** *(Rentsync structured checkboxes)*:
-□ Beach nearby  □ Convenience store  □ Parks nearby  □ Public transit  □ Schools nearby  □ Shopping nearby
+- [ ] Beach nearby
+- [ ] Convenience store
+- [ ] Parks nearby
+- [ ] Public transit
+- [ ] Schools nearby
+- [ ] Shopping nearby
 
 ---
 
 **Unit / Apartment Amenities:**
 
-□ Air conditioner  □ Central air conditioning
-□ In-suite washer / dryer  □ W/D hookups only  □ Dishwasher  □ Microwave
-□ Refrigerator  □ Gas range  □ Garburator  □ Efficient appliances
-□ Fireplace  □ Individual / electronic thermostat
-□ Hardwood floors  □ Vinyl plank  □ Ceramic / tile  □ Carpet
-□ High ceilings  □ Large closets  □ Walk-in closet  □ Ensuite bathroom
-□ Balcony  □ Skylight
-□ City view  □ Park view  □ Waterfront view
-□ Window coverings / blinds included
-□ Cable included  □ Cable ready  □ Internet included  □ Internet ready
-□ Security alarm  □ Extra storage in unit  □ Ceiling fan  □ Handrails
-□ Other: _______________________________________________
+- [ ] Air conditioner
+- [ ] Central air conditioning
+- [ ] In-suite washer / dryer
+- [ ] W/D hookups only
+- [ ] Dishwasher
+- [ ] Microwave
+- [ ] Refrigerator
+- [ ] Gas range
+- [ ] Garburator
+- [ ] Efficient appliances
+- [ ] Fireplace
+- [ ] Individual / electronic thermostat
+- [ ] Hardwood floors
+- [ ] Vinyl plank
+- [ ] Ceramic / tile
+- [ ] Carpet
+- [ ] High ceilings
+- [ ] Large closets
+- [ ] Walk-in closet
+- [ ] Ensuite bathroom
+- [ ] Balcony
+- [ ] Skylight
+- [ ] City view
+- [ ] Park view
+- [ ] Waterfront view
+- [ ] Window coverings / blinds included
+- [ ] Cable included
+- [ ] Cable ready
+- [ ] Internet included
+- [ ] Internet ready
+- [ ] Security alarm
+- [ ] Extra storage in unit
+- [ ] Ceiling fan
+- [ ] Handrails
+- [ ] Other: _______________________________________________
 
 **Amenities currently out of service or seasonal** *(note expected return date)*: _______________________________________________
 
@@ -744,30 +854,30 @@ Studio: max ___ occupants   1BR: max ___   2BR: max ___   3BR: max ___
 ### Photo Checklist — Provide at Minimum
 
 **Exterior:**
-□ Front of building (daytime)
-□ Front of building (evening / night, if possible)
-□ Building entrance / lobby
-□ Signage
+- [ ] Front of building (daytime)
+- [ ] Front of building (evening / night, if possible)
+- [ ] Building entrance / lobby
+- [ ] Signage
 
 **Suites** *(one full set per suite type — Studio, 1BR, 2BR, 3BR)*:
-□ Living room
-□ Kitchen
-□ Primary bedroom
-□ Secondary bedroom *(if applicable)*
-□ Bathroom(s)
-□ Balcony / outdoor space *(if applicable)*
-□ Closet / storage space
+- [ ] Living room
+- [ ] Kitchen
+- [ ] Primary bedroom
+- [ ] Secondary bedroom *(if applicable)*
+- [ ] Bathroom(s)
+- [ ] Balcony / outdoor space *(if applicable)*
+- [ ] Closet / storage space
 
 **Amenities** *(one photo per amenity that exists)*:
-□ Fitness centre / gym
-□ Pool / hot tub / sauna
-□ Common lounge / party room
-□ Outdoor patio / courtyard / BBQ area
-□ Bike storage
-□ Package room / lockers
-□ Parking (underground / covered)
-□ Dog wash station / dog run *(if applicable)*
-□ Laundry room *(if shared)*
+- [ ] Fitness centre / gym
+- [ ] Pool / hot tub / sauna
+- [ ] Common lounge / party room
+- [ ] Outdoor patio / courtyard / BBQ area
+- [ ] Bike storage
+- [ ] Package room / lockers
+- [ ] Parking (underground / covered)
+- [ ] Dog wash station / dog run *(if applicable)*
+- [ ] Laundry room *(if shared)*
 
 ---
 
@@ -836,8 +946,6 @@ _______________________________________________
 
 **Lingo bans** *(words/phrases ZARA must not use — e.g., "come in", "cheap", "affordable")*:
 _______________________________________________
-
----
 
 ---
 
