@@ -129,7 +129,7 @@
 | Maple Leaf Court | 48 | 0 | Low Rise | |
 | North Haven Estates | 104 | 5 | Low Rise | |
 | Pioneer Apartments | 22 | 6 | Mid Rise | |
-| The Barracks | 369 | 18 | Luxury | ⚡ Cluster with Maverick + Edward |
+| The Barracks | 369 | 18 | Luxury | ⚡ Cluster with Maverick |
 | The Manning | 75 | 0 | Mid Rise | |
 | The Maverick | 109 | 85 | Mid Rise | ⚡ 78% vacant — top priority |
 
@@ -491,8 +491,8 @@ ZARA auto-offers a route tour when ≥ 2 buildings in a cluster both have vacanc
 
 | Cluster | Pod | Buildings | Radius | Trigger Condition |
 |---|---|---|---|---|
-| Edm North Priority | 4 | The Maverick + The Barracks + The Edward Block | ~600m | Any 2 have vacancy |
-| Edm Downtown Core | 0 | Kerry Manor + Richard House + Lorinda Court + Mid City Manor + Collage Place | ~400m | Any 2 have vacancy |
+| Edm North Priority | 4 | The Maverick + The Barracks | ~600m | Any 2 have vacancy |
+| Edm Downtown Core | 0 | Kerry Manor + Richard House + Lorinda Court + Mid City Manor + Collage Place + The Edward Block | ~1km | Any 2 have vacancy |
 | Edm Downtown Norwood | 0 | Norwood Village + Oakwood Manor + Rivergate + Parkdale Terrace | ~1km | Any 2 have vacancy |
 | Cal SE | 8 | Legacy Place + Junction88 + Junction21 | ~3km | Any 2 have vacancy |
 | Cal Skyview NE | 7 | Sky 1 + Sky 2 + Trailside + One51 | ~1km | Any 2 have vacancy |
