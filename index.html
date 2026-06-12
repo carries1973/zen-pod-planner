@@ -270,19 +270,14 @@ button{color:inherit}
   <!-- LAYERS TAB -->
   <div id="panel-layers" style="display:none;flex-direction:column;flex:1;overflow-y:auto;padding:12px;gap:10px">
     <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;padding-bottom:4px;border-bottom:1px solid var(--border)">Map Overlays</div>
-    <button class="lyr-btn" id="lyr-zones" onclick="toggleZones()">
-      <div class="lyr-icon">🗺</div>
-      <div class="lyr-info"><div class="lyr-name">Zone Visualization</div><div class="lyr-desc">NW / NE / SW / SE / Central boundaries for Edmonton &amp; Calgary</div></div>
-      <div class="lyr-pill"></div>
-    </button>
-    <button class="lyr-btn" id="lyr-arh" onclick="toggleARH()">
-      <div class="lyr-icon" style="color:#CC3333">●</div>
-      <div class="lyr-info"><div class="lyr-name">ARH Portfolio</div><div class="lyr-desc">ZEN client portfolio: 71 buildings, ~1,073 units, Whyte Ave &amp; Westmount corridors</div></div>
-      <div class="lyr-pill"></div>
-    </button>
     <button class="lyr-btn" id="lyr-balto" onclick="toggleBalto()">
       <div class="lyr-icon" style="color:#9933CC">●</div>
       <div class="lyr-info"><div class="lyr-name">Balto Capital Highlight</div><div class="lyr-desc">Highlight the 23 Balto Capital buildings in purple</div></div>
+      <div class="lyr-pill"></div>
+    </button>
+    <button class="lyr-btn lyr-on" id="lyr-sfh" onclick="toggleSFH()">
+      <div class="lyr-icon">🏠</div>
+      <div class="lyr-info"><div class="lyr-name">SFH Homes</div><div class="lyr-desc">257 single-family homes &amp; duplexes — toggle visibility on the map</div></div>
       <div class="lyr-pill"></div>
     </button>
     <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;padding:8px 0 4px;border-bottom:1px solid var(--border)">Property Types</div>
@@ -291,7 +286,7 @@ button{color:inherit}
       <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:#E8A855;flex-shrink:0"></div><strong style="color:#E8A855">Urban AC</strong> — Managed as Vintage C</div>
       <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:#C96A1A;flex-shrink:0"></div><strong style="color:#C96A1A">Vintage C</strong> — Roving leasing team</div>
       <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:#9933CC;flex-shrink:0"></div><strong style="color:#9933CC">Balto Capital</strong> — Client portfolio</div>
-      <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:#CC3333;flex-shrink:0"></div><strong style="color:#CC3333">ARH</strong> — Client portfolio overlay</div>
+      
     </div>
   </div>
 
@@ -333,13 +328,9 @@ const PROPS=[{"id":1,"name":"Mid City Manor","addr":"10250 118 Street, Edmonton"
 // ── Property Type Classification ──────────────────────────────────────────────
 const PROP_TYPES={83:'a',24:'a',25:'a',26:'a',27:'a',29:'a',30:'a',34:'a',35:'a',36:'a',41:'a',44:'a',45:'a',46:'a',48:'a',49:'a',71:'a',76:'a',77:'a',78:'a',79:'a',80:'a',81:'a',82:'a',83:'a',28:'ac',33:'ac',39:'ac',42:'ac',47:'ac',50:'ac',63:'ac',69:'ac',43:'balto',51:'balto',52:'balto',53:'balto',54:'balto',55:'balto',56:'balto',57:'balto',58:'balto',59:'balto',60:'balto',61:'balto',62:'balto',64:'balto',65:'balto',66:'balto',67:'balto',68:'balto',70:'balto',72:'balto',73:'balto',74:'balto',75:'balto'};
 const propType=id=>PROP_TYPES[id]||'c';
-const TYPE_COLORS={a:'#009CC6',ac:'#E8A855',c:'#C96A1A',balto:'#9933CC',arh:'#CC3333'};
-const TYPE_LABELS={a:'Urban A',ac:'Urban AC',c:'Vintage C',balto:'Balto Capital',arh:'ARH'};
+const TYPE_COLORS={a:'#009CC6',ac:'#E8A855',c:'#C96A1A',balto:'#9933CC'};
+const TYPE_LABELS={a:'Urban A',ac:'Urban AC',c:'Vintage C',balto:'Balto Capital'};
 
-// ── ARH Overlay Data ──────────────────────────────────────────────────────────
-const ARH_PROPS=[{name:"ARH-0001",addr:"11603 Saskatchewan Drive, Edmonton",lat:53.5632,lng:-113.5045,units:2},{name:"ARH-0002",addr:"10926 77 Avenue, Edmonton",lat:53.5193,lng:-113.5015,units:3},{name:"ARH-0003",addr:"10928 77 Avenue, Edmonton",lat:53.5193,lng:-113.5016,units:3},{name:"ARH-0004",addr:"9359 94 Street, Edmonton",lat:53.534,lng:-113.4817,units:5},{name:"ARH-0005",addr:"8523-25 82 Avenue, Edmonton",lat:53.521,lng:-113.466,units:8},{name:"ARH-0006",addr:"6561 111 Street, Edmonton",lat:53.515,lng:-113.5045,units:6},{name:"ARH-0007",addr:"10849 80 Avenue, Edmonton",lat:53.5205,lng:-113.5008,units:7},{name:"ARH-0008",addr:"9936 87 Avenue, Edmonton",lat:53.5284,lng:-113.4588,units:15},{name:"ARH-0009",addr:"7615 105 Street, Edmonton",lat:53.5175,lng:-113.496,units:16},{name:"ARH-0010",addr:"11123 Groat Road, Edmonton",lat:53.556,lng:-113.5185,units:11},{name:"ARH-0011",addr:"10845 80 Avenue, Edmonton",lat:53.5205,lng:-113.5006,units:6},{name:"ARH-0012",addr:"10940 53 Avenue, Edmonton",lat:53.5083,lng:-113.5018,units:30},{name:"ARH-0013",addr:"10818 81 Avenue, Edmonton",lat:53.521,lng:-113.501,units:37},{name:"ARH-0014",addr:"10268 87 Street NW, Edmonton",lat:53.545,lng:-113.459,units:4},{name:"ARH-0015",addr:"10018 112 Street NW, Edmonton",lat:53.543,lng:-113.507,units:21},{name:"ARH-0016",addr:"9138 82 Ave, Edmonton",lat:53.5215,lng:-113.466,units:17},{name:"ARH-0017",addr:"10530 79 Avenue NW, Edmonton",lat:53.5192,lng:-113.4965,units:10},{name:"ARH-0018",addr:"10850 84 Avenue NW, Edmonton",lat:53.5228,lng:-113.501,units:10},{name:"ARH-0019",addr:"8411 109 Street, Edmonton",lat:53.5215,lng:-113.503,units:5},{name:"ARH-0020",addr:"11801-13 102 Ave, Edmonton",lat:53.5448,lng:-113.526,units:7},{name:"ARH-0021",addr:"10035 85 Ave, Edmonton",lat:53.5228,lng:-113.462,units:9},{name:"ARH-0022",addr:"11045 128 Street, Edmonton",lat:53.5555,lng:-113.5465,units:14},{name:"ARH-0023",addr:"9905 83 Avenue, Edmonton",lat:53.521,lng:-113.464,units:27},{name:"ARH-0024",addr:"8503 99 Street NW, Edmonton",lat:53.5215,lng:-113.4905,units:18},{name:"ARH-0025",addr:"10610 80 Ave NW, Edmonton",lat:53.521,lng:-113.4965,units:18},{name:"ARH-0026",addr:"10725 85 Ave NW, Edmonton",lat:53.5228,lng:-113.4622,units:15},{name:"ARH-0027",addr:"10731 85 Ave NW, Edmonton",lat:53.5228,lng:-113.4624,units:15},{name:"ARH-0028",addr:"8120 97 Street, Edmonton",lat:53.521,lng:-113.492,units:16},{name:"ARH-0029",addr:"9860 88 Ave, Edmonton",lat:53.524,lng:-113.4596,units:4},{name:"ARH-0030",addr:"8809 99 Street, Edmonton",lat:53.523,lng:-113.4905,units:4},{name:"ARH-0031",addr:"9909 Saskatchewan Drive NW, Edmonton",lat:53.5395,lng:-113.4938,units:10},{name:"ARH-0032",addr:"9128 99 Street NW, Edmonton",lat:53.5218,lng:-113.4907,units:11},{name:"ARH-0033",addr:"11950 100 Ave NW, Edmonton",lat:53.5438,lng:-113.525,units:25},{name:"ARH-0034",addr:"10710 127 Street, Edmonton",lat:53.55,lng:-113.5442,units:14},{name:"ARH-0035",addr:"6233 124 Street, Edmonton",lat:53.5148,lng:-113.5358,units:20},{name:"ARH-0036",addr:"12704 107 Avenue, Edmonton",lat:53.553,lng:-113.4985,units:6},{name:"ARH-0037",addr:"9927 81 Avenue, Edmonton",lat:53.521,lng:-113.494,units:10},{name:"ARH-0040",addr:"10840 81 Avenue, Edmonton",lat:53.5213,lng:-113.501,units:42},{name:"ARH-0041",addr:"9915 84 Avenue, Edmonton",lat:53.5225,lng:-113.4638,units:4},{name:"ARH-0042",addr:"9919 84 Avenue, Edmonton",lat:53.5225,lng:-113.464,units:4},{name:"ARH-0043",addr:"9921 84 Avenue, Edmonton",lat:53.5225,lng:-113.4641,units:8},{name:"ARH-0044",addr:"9353-9355 94 Street, Edmonton",lat:53.534,lng:-113.4817,units:5},{name:"ARH-0045",addr:"11147 Groat Road, Edmonton",lat:53.5565,lng:-113.5185,units:14},{name:"ARH-0046",addr:"8322 99 Street, Edmonton",lat:53.5213,lng:-113.4908,units:9},{name:"ARH-0047",addr:"10726 78 Avenue, Edmonton",lat:53.5188,lng:-113.5,units:9},{name:"ARH-0048",addr:"10141 83 Avenue, Edmonton",lat:53.522,lng:-113.464,units:9},{name:"ARH-0049",addr:"10620 78 Avenue, Edmonton",lat:53.5188,lng:-113.4968,units:11},{name:"ARH-0050",addr:"10556 80 Avenue, Edmonton",lat:53.5203,lng:-113.496,units:12},{name:"ARH-0051",addr:"10030 86 Avenue, Edmonton",lat:53.5228,lng:-113.4593,units:21},{name:"ARH-0052",addr:"7805 107 Street, Edmonton",lat:53.5188,lng:-113.498,units:6},{name:"ARH-0053",addr:"11042 128 Avenue, Edmonton",lat:53.5555,lng:-113.546,units:24},{name:"ARH-0054",addr:"11115 130 Street, Edmonton",lat:53.5565,lng:-113.549,units:18},{name:"ARH-0055",addr:"10025 117 Street, Edmonton",lat:53.5432,lng:-113.5165,units:7},{name:"ARH-0056",addr:"10036 117 Street, Edmonton",lat:53.5432,lng:-113.5165,units:12},{name:"ARH-0057",addr:"11618 100 Avenue, Edmonton",lat:53.544,lng:-113.5235,units:24},{name:"ARH-0058",addr:"9818 82 Avenue, Edmonton",lat:53.5213,lng:-113.4665,units:28},{name:"ARH-0059",addr:"10625 122 Street, Edmonton",lat:53.5453,lng:-113.534,units:32},{name:"ARH-0060",addr:"8504 99 Street, Edmonton",lat:53.5215,lng:-113.4908,units:28},{name:"ARH-0061",addr:"10145 113 Street, Edmonton",lat:53.5443,lng:-113.509,units:32},{name:"ARH-0068",addr:"8511-17 89 Street, Edmonton",lat:53.5225,lng:-113.4598,units:8},{name:"ARH-0069",addr:"11114 132 Street, Edmonton",lat:53.5565,lng:-113.552,units:6},{name:"ARH-0070",addr:"10013 84 Avenue, Edmonton",lat:53.5225,lng:-113.4635,units:12},{name:"ARH-0071",addr:"9813 104 Street, Edmonton",lat:53.5392,lng:-113.4958,units:13},{name:"ARH-0072",addr:"10738 85 Avenue, Edmonton",lat:53.5228,lng:-113.4622,units:14},{name:"ARH-0073",addr:"5110 106 Street NW, Edmonton",lat:53.508,lng:-113.4965,units:18},{name:"ARH-0074",addr:"9864 84 Ave NW, Edmonton",lat:53.5225,lng:-113.4638,units:27},{name:"ARH-0075",addr:"13046 82 Street NW, Edmonton",lat:53.5915,lng:-113.4668,units:23},{name:"ARH-0076",addr:"13116 82 Street NW, Edmonton",lat:53.5918,lng:-113.4665,units:23},{name:"ARH-0077",addr:"8539 82 Avenue, Edmonton",lat:53.521,lng:-113.466,units:21},{name:"ARH-0078",addr:"8550 82 Avenue, Edmonton",lat:53.521,lng:-113.4663,units:12},{name:"ARH-0079",addr:"11745 133 Street NW, Edmonton",lat:53.5648,lng:-113.5535,units:12},{name:"ARH-0080",addr:"11736 Groat Road, Edmonton",lat:53.5648,lng:-113.5188,units:7},{name:"ARH-0081",addr:"9825 82 Avenue, Edmonton",lat:53.5213,lng:-113.4665,units:34},{name:"ARH-0082",addr:"8732 101 Avenue, Edmonton",lat:53.5445,lng:-113.4595,units:6},{name:"ARH-0083",addr:"12222 111 Avenue, Edmonton",lat:53.5758,lng:-113.5048,units:11},{name:"ARH-0084",addr:"11042 128 Street, Edmonton",lat:53.5555,lng:-113.5462,units:24}];
-
-// ── Zone Config ───────────────────────────────────────────────────────────────
 const ZONE_CFG={
   Edmonton:{splitLat:53.557,splitLon:-113.493,central:{latMin:53.53,latMax:53.557,lonMin:-113.534,lonMax:-113.493},bounds:[[53.35,-114.2],[53.75,-113.2]]},
   Calgary:{splitLat:51.078,splitLon:-114.063,central:{latMin:51.026,latMax:51.078,lonMin:-114.094,lonMax:-114.063},bounds:[[50.6,-115.0],[51.35,-113.5]]}
@@ -359,7 +350,6 @@ let tour=[],markers={},podLayers={},podVisible={},clusterGroup,routeLayer;
 let crimeLayer=null,crimeMode='total',currentCity='all',vacantOnly=false;
 let routeDebounce,lastLegs=[];
 let zoneLayer=null,zoneOn=false;
-let arhGroup=null,arhOn=false;
 let baltoHighlight=false;
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
 const podColor=id=>{const p=PODS.find(x=>x.id===id);return p?p.color:'#64748b';};
@@ -708,24 +698,13 @@ function toggleZones(){
   else if(zoneLayer)map.removeLayer(zoneLayer);
   document.getElementById('lyr-zones').classList.toggle('lyr-on',zoneOn);
 }
-// ── ARH Overlay ───────────────────────────────────────────────────────────────
-function buildARHLayer(){
-  const grp=L.layerGroup();
-  ARH_PROPS.forEach(p=>{
-    const r=3+Math.sqrt(p.units/40)*6;
-    const m=L.circleMarker([p.lat,p.lng],{radius:r,fillColor:'#CC3333',color:'#ff6666',weight:1,fillOpacity:.75});
-    m.bindPopup(`<div class="ppname" style="color:#ff6666">${p.name}</div><div class="ppaddr">${p.addr}</div><div class="ppunits">${p.units} units · <span style="color:#CC3333">ARH Portfolio</span></div>`,{maxWidth:220});
-    m.addTo(grp);
-  });
-  return grp;
-}
-function toggleARH(){
-  arhOn=!arhOn;
-  if(arhOn){if(!arhGroup)arhGroup=buildARHLayer();arhGroup.addTo(map);}
-  else if(arhGroup)map.removeLayer(arhGroup);
-  document.getElementById('lyr-arh').classList.toggle('lyr-on',arhOn);
-}
 // ── Balto highlight ───────────────────────────────────────────────────────────
+let sfhOn=true;
+function toggleSFH(){
+  sfhOn=!sfhOn;
+  PROPS.filter(p=>p.sfh).forEach(p=>{const m=markers[p.id];if(!m)return;if(sfhOn)clusterGroup.addLayer(m);else clusterGroup.removeLayer(m);});
+  document.getElementById('lyr-sfh').classList.toggle('lyr-on',sfhOn);
+}
 function toggleBalto(){
   baltoHighlight=!baltoHighlight;
   document.getElementById('lyr-balto').classList.toggle('lyr-on',baltoHighlight);
