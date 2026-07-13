@@ -444,8 +444,8 @@ function makeIcon(p,inTour,tourIdx){
   const size=p.units>200?20:p.units>50?16:p.units>20?14:11;
   const s2=hasVac?size+4:size;
   const isBalto=baltoHighlight&&propType(p.id)==='balto';
-  const bg=hasVac?'#dc2626':isBalto?'#7c3aed':'#c3d0e5';
-  const border=hasVac?'2px solid #ef4444':isBalto?'2px solid #a855f7':'1px solid #94a3b8';
+  const bg=isBalto?'#7c3aed':hasVac?'#dc2626':'#c3d0e5';
+  const border=isBalto?'2px solid #a855f7':hasVac?'2px solid #ef4444':'1px solid #94a3b8';
   const badge=vac>0?`<div style="position:absolute;top:-6px;right:-6px;background:#dc2626;color:white;border-radius:8px;font-size:8px;font-weight:800;padding:0 3px;min-width:14px;text-align:center;border:1.5px solid #ffffff;line-height:15px;box-shadow:0 1px 4px rgba(0,0,0,.5)">${vac>99?'99+':vac}</div>`:'';
   return L.divIcon({html:`<div style="position:relative;${hasVac?'':'opacity:.4'}"><div style="width:${s2}px;height:${s2}px;border-radius:50%;background:${bg};border:${border};box-shadow:0 1px 6px rgba(0,0,0,.6)${hasVac?';box-shadow:0 0 0 3px rgba(157,23,77,.4),0 2px 8px rgba(0,0,0,.5)':''}"></div>${badge}</div>`,className:'',iconSize:[s2,s2],iconAnchor:[s2/2,s2/2]});
 }
