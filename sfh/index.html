@@ -740,6 +740,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .nav button{background:transparent;border:0;color:#cfe0e7;font:inherit;font-size:14px;font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer}
   .nav button:hover{background:rgba(255,255,255,.08)}
   .nav button.on{background:#fff;color:var(--navy)}
+  .nav a{color:#cfe0e7;font-size:14px;font-weight:600;padding:9px 16px;border-radius:8px;text-decoration:none}
+  .nav a:hover{background:rgba(255,255,255,.08)}
+  .nav a.on{background:#fff;color:var(--navy)}
   .top .l2l{margin-left:auto;font-size:12.5px;color:#8fdcec;text-decoration:none;border:1px solid #17627d;border-radius:8px;padding:7px 12px;font-weight:600}
   .top .l2l:hover{background:rgba(255,255,255,.08)}
   main{flex:1;min-height:0;position:relative}
@@ -857,6 +860,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <body>
 <div class="top">
   <div class="brand">ZEN Leasing<span>Single-Family Portfolio — by Pod</span></div>
+  <nav class="nav">
+    <a class="on" href="./">Pod Map</a>
+    <a href="sop.html">Application-to-Lease SOP</a>
+  </nav>
 </div>
 <main>
   <section class="view map on" id="v-map">
