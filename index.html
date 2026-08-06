@@ -946,6 +946,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
   const isVP=(s)=>{s=(s||'').toString().toLowerCase();return VP_HIDE.some(k=>s.includes(k));};
   if(Array.isArray(D.coverage)) D.coverage=D.coverage.filter(c=>!isVP(c.person)&&!isVP(c.role)&&!isVP(c.area));
   if(D.agents) delete D.agents;  // never render raw payroll (contains VP comp)
+  // ===== HARD-CODED RULE: no individual salary/compensation renders anywhere on this presentation. =====
+  if(D.org) Object.keys(D.org).forEach(k=>{ if(Array.isArray(D.org[k])) D.org[k].forEach(p=>{ if(p&&typeof p.comp==='string') delete p.comp; }); });
   // =====================================================================================================
   const COL={AB:'#0090ae',Balto:'#C4820A',Vintage:'#7b6ca8'}, LBL={AB:'A / B Class',Balto:'Balto Capital',Vintage:'Vintage-C ($50/door)'};
   const mf=D.buildings.filter(b=>!b.sfh), sfh=D.buildings.filter(b=>b.sfh);
