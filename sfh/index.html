@@ -992,7 +992,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
     const p=podById[h.pod]||UNASSIGNED;
     if(!podLayers[p.id]){podLayers[p.id]=L.layerGroup().addTo(map);podMarkers[p.id]=[];}
     const hasVac=h.units.some(u=>u.status==='Vacant');
-    const base={radius:h.units.length>1?7.5:6,weight:hasVac?2.5:1.5,color:hasVac?'#C4820A':'#fff',fillColor:h.fpc?'#9aa4ad':p.color,fillOpacity:h.fpc?.8:.9};
+    // Fully-leased homes are greyed back so the vacancies carry the map:
+    // vacant keeps the pod colour and the gold ring, leased recedes to grey.
+    // Front Porch stays identifiable in both states via a dashed outline,
+    // since plain grey now means "leased" rather than "offboarding".
+    const base=hasVac
+      ?{radius:h.units.length>1?8:6.5,weight:2.5,color:'#C4820A',fillColor:h.fpc?'#9aa4ad':p.color,fillOpacity:h.fpc?.85:.95}
+      :{radius:h.units.length>1?5.5:4.5,weight:1,color:'#fff',fillColor:'#c3ccd4',fillOpacity:.55};
+    if(h.fpc){base.dashArray='2,3';base.color=hasVac?'#C4820A':'#93a0ab';}
     const [dlat,dlng]=displayLatLng(h);
     const m=L.circleMarker([dlat,dlng],base);
     m._base=base;m._home=h;
@@ -1029,7 +1036,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
   fl.innerHTML='<h3>Filter</h3>'
     +['All'].concat(TYPES).map(t=>'<span class="chip'+(t==='All'?' on':'')+'" data-t="'+t+'">'+(t==='Single-Family House'?'Single-Family':t)+'</span>').join('')
     +'<span class="chip" data-vac="1" style="border-color:#C4820A;color:#b45309">Vacant only</span>'
-    +'<span class="chip" data-fpc="1" style="border-color:#9aa4ad;color:#5b6b78" title="Front Porch Communities — client being offboarded; shown grey on the map"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#9aa4ad;margin-right:4px"></span>Hide Front Porch</span>'
+    +'<span class="chip" data-fpc="1" style="border-color:#9aa4ad;color:#5b6b78" title="Front Porch Communities — client being offboarded; shown with a dashed outline on the map"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#9aa4ad;margin-right:4px"></span>Hide Front Porch</span>'
+    +'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:10px;color:#5b6b78">'
+      +'<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#0090ae;border:2px solid #C4820A;vertical-align:-2px;margin-right:4px"></span>has a vacancy — pod colour, gold ring</span>'
+      +'<span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#c3ccd4;border:1px solid #fff;vertical-align:-1px;margin-right:4px;opacity:.75"></span>fully leased</span>'
+      +'<span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#9aa4ad;border:1px dashed #5b6b78;vertical-align:-1px;margin-right:4px"></span>Front Porch (dashed)</span>'
+    +'</div>'
     +'<div id="fnote" style="font-size:10.5px;color:#b45309;margin-top:3px;font-weight:600"></div>';
   fl.querySelectorAll('.chip[data-t]').forEach(c=>c.addEventListener('click',()=>{
     state.type=c.dataset.t;
@@ -1065,7 +1077,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
               const v=h.units.filter(u=>u.status==='Vacant').length;
               const hi=homes.indexOf(h);
               return '<div class="hrow" data-h="'+hi+'" style="padding:3px 0;border-top:1px dashed var(--line,#e5e9ee);cursor:pointer;display:flex;justify-content:space-between;gap:6px" title="click for unit details">'
-                +'<span'+(h.fpc?' style="color:#8a959f"':'')+'>'+h.name+(h.fpc?' <span style="background:#e8ebee;color:#5b6b78;border-radius:3px;padding:0 4px;font-size:8.5px;font-weight:800;letter-spacing:.04em">FPC</span>':'')+' <span style="color:#5b6b78">· '+h.units.length+'u</span>'+(v?' <b style="color:#b45309">'+v+' vacant</b>':'')+'</span>'
+                +'<span'+(h.fpc?' style="color:#8a959f"':(v?'':' style="color:#9aa7b2"'))+'>'+h.name+(h.fpc?' <span style="background:#e8ebee;color:#5b6b78;border-radius:3px;padding:0 4px;font-size:8.5px;font-weight:800;letter-spacing:.04em">FPC</span>':'')+' <span style="color:#5b6b78">· '+h.units.length+'u</span>'+(v?' <b style="color:#b45309">'+v+' vacant</b>':' <span style="color:#9aa7b2">· leased</span>')+'</span>'
                 +'<span class="hcar" style="color:#9aa7b2;flex:0 0 auto">▸</span></div>'
                 +'<div class="hx" data-hx="'+hi+'" style="display:none;padding:0 4px 6px 10px;background:#f7f9fb;border-left:2px solid '+p.color+'">'
                 +'<div style="font-size:10px;color:#5b6b78;padding-top:4px">'+h.type+' · '+h.addr+'</div>'
@@ -1092,7 +1104,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
         const x=document.querySelector('.podx[data-podx="'+id+'"]');
         if(x)x.style.display=(x.style.display==='none'?'block':'none');
         Object.values(podMarkers).forEach(ms=>ms.forEach(m=>m.setStyle(m._base)));
-        (podMarkers[id]||[]).forEach(m=>m.setStyle({weight:3,color:'#C4820A'}));
+        // highlight the pod without making leased pins look vacant
+        (podMarkers[id]||[]).forEach(m=>m.setStyle({weight:3,color:m._base.color==='#C4820A'?'#C4820A':'#12222e'}));
         const pts=(podMarkers[id]||[]).filter(m=>podLayers[id].hasLayer(m)).map(m=>m.getLatLng());
         if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[60,60],maxZoom:13});
       });
