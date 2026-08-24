@@ -76,3 +76,22 @@ def norm_unit(u):
     m = re.match(r'^\d{4,6}\s*-\s*(.+)$', u)   # '11204 - Bsmt' -> 'Bsmt'
     if m: u = m.group(1).strip()
     return u.lower()
+
+
+def load(path):
+    """Dispatch on the workbook's own sheet name so either Buildium export
+    parses through one entry point. Sheet name, not filename — a renamed
+    download must still parse as what it actually is."""
+    import openpyxl as _ox
+    names = _ox.load_workbook(path, read_only=True).sheetnames
+    if 'Rent Roll' in names:
+        import rrlib
+        return rrlib.parse(path)
+    if 'Vacant Units' in names:
+        recs, meta = parse(path)
+        for r in recs:
+            r.setdefault('status', 'Vacant')
+        meta['kind'] = 'vacant'
+        return recs, meta
+    raise SystemExit('REFUSE: %s has no "Rent Roll" or "Vacant Units" sheet '
+                     '(found %s)' % (path, names))

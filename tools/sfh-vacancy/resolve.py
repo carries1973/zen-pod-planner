@@ -17,6 +17,8 @@ OVERRIDE = {
     'SF296': '10430 98 Avenue',            # "Station View Townhomes"
     'SF300': '10461 99 Avenue',            # "Station View Apartments"
     'SF350': '2104 2 Avenue NE',
+    'SF137': 'Prairie Point Townhomes',    # Buildium says "Townhouses"
+    'SF333': '7110 Keswick Drive SW',      # Buildium says "Keswick Common"
     'RP27':  '9730 106 Street NW',
     'RP169': 'Trails Edge',
     'RP158': '170 North Railway',

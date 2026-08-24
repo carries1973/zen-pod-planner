@@ -1,0 +1,32 @@
+{
+ "11306 123 Street NW, Edmonton, AB": [
+  53.562258,
+  -113.534646,
+  "geocoder.ca",
+  "T5M0E9"
+ ],
+ "13230 Fort Road NW, Edmonton, AB": [
+  53.5779594,
+  -113.4579197,
+  "nominatim",
+  "T5B 2C9"
+ ],
+ "4304 139 Avenue NW, Edmonton, AB": [
+  53.6013803,
+  -113.4088282,
+  "nominatim",
+  "T5Y 2W6"
+ ],
+ "7110 Keswick Common SW, Edmonton, AB": [
+  53.41033,
+  -113.62149,
+  "geocoder.ca",
+  "T6W5P7"
+ ],
+ "87 Darlington Court, Sherwood Park, AB": [
+  53.5504918,
+  -113.2655452,
+  "nominatim",
+  "T8H 1Y1"
+ ]
+}
