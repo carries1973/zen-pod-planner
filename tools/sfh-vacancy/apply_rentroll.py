@@ -19,6 +19,7 @@ The roll is at LEASE grain (one row per lease, history included) — rrlib
 collapses it to doors before anything here runs.
 """
 import json, re, sys, os, datetime
+from collections import Counter
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vaclib, rrlib, resolve, cover, addr, geocode
 
@@ -53,12 +54,31 @@ NEW_PROPS = {
 # pin is worse than a named gap.
 
 
+# The rent roll carries one scope with no SF/RP code of its own. The ILS unit
+# list names it: "SF354 - 11306 1213 Street - Inglewood 9 Plex". Evidenced from
+# that export, not inferred.
+SCOPE_CODE = {'11306 123 Street Northwest': 'SF354'}
+
+
 def load():
     raw = open(HTML, encoding='utf-8').read()
     m = BLOB_RE.search(raw)
     if not m:
         sys.exit('REFUSE: data blob not found in %s' % HTML)
     return raw, m, json.loads(m.group(2))
+
+
+def write_html(text):
+    """Write the page atomically. A plain open(...,'w') truncates first, so a
+    bug anywhere between the open and the write leaves the deliverable an empty
+    file — which is exactly what happened once. Build it beside the target and
+    rename it into place instead."""
+    if not text or '<script id="data"' not in text:
+        sys.exit('REFUSE: refusing to write a page with no data blob')
+    tmp = HTML + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as fh:
+        fh.write(text)
+    os.replace(tmp, HTML)
 
 
 def haversine(a, b, c, d):
@@ -96,12 +116,21 @@ def main():
         sys.exit(__doc__)
     report = os.path.expanduser(args[0])
     raw, m, blob = load()
+    prev_audit = blob.get('audit') or {}
     homes = blob['homes']
     before_doors = sum(len(h['units']) for h in homes)
     before_vac = sum(1 for h in homes for u in h['units']
                      if u['status'] == 'Vacant')
 
     R = cover.resolve_all(blob, report)
+    for coll in (R['doors'], R['active']):
+        for d in coll:
+            if not d['code'] and d['scope'] in SCOPE_CODE:
+                d['code'] = SCOPE_CODE[d['scope']]
+    R['hits'] = [(SCOPE_CODE.get(sc, c), u, k, sc, st)
+                 for c, u, k, sc, st in R['hits']]
+    for miss in R['misses']:
+        miss['code'] = SCOPE_CODE.get(miss['scope'], miss['code'])
     asof = R['meta']['asof']
     active = R['active']
     doors_all = R['doors']
@@ -171,6 +200,35 @@ def main():
             'units': [door_unit(d, code) for d in ds]})
         added_homes.append((spec['name'], len(ds), pod, round(dist, 1),
                             src, spec['why']))
+
+    # ---- 3b. permanent capture: stamp the Buildium code on every pin the roll
+    # reached, so the next report — and the ILS listing join — match by code
+    # instead of re-deriving from addresses. Stamp the code that owns most of
+    # the pin's doors, not merely the first one seen.
+    owners = {}
+    for code, unit, (i, ui), scope, status in R['hits']:
+        if code:
+            owners.setdefault(i, Counter())[code] += 1
+    # Doors added in step 2 count too — a pin that Buildium reached only with
+    # NEW doors would otherwise never be stamped, and the ILS listing join
+    # would miss every ad against it.
+    for miss in R['misses']:
+        if miss['home'] is not None and miss['code']:
+            owners.setdefault(miss['home'], Counter())[miss['code']] += 1
+    # A pin can hold doors from SEVERAL codes — the map keeps one pin for
+    # 18120 28 Ave SW while Buildium splits it across SF316/318/320/322/323/…
+    # Keep every code, or the ILS listing join silently misses those ads.
+    stamped = 0
+    for i, c in owners.items():
+        best = c.most_common(1)[0][0]
+        allc = sorted(c)
+        if homes[i].get('code') != best or homes[i].get('codes') != allc:
+            homes[i]['code'] = best
+            if len(allc) > 1:
+                homes[i]['codes'] = allc
+            else:
+                homes[i].pop('codes', None)
+            stamped += 1
 
     # ---- 4. map doors the active roll does not claim -----------------------
     off_parsed = {s: addr.parse(s) for s in
@@ -261,13 +319,40 @@ def main():
                  '(%d roll - %d non-door - %d unplaced)'
                  % (after_vac, placeable_vac, roll_vac, notdoor_vac, unplaced_vac))
 
+    # The change log describes a TRANSITION, not a run. Re-running against the
+    # same roll is a no-op, and a no-op must not erase the record of what the
+    # previous run actually did to the map.
+    changed = bool(added_homes or added_doors or removed or dropped_homes)
+    if changed:
+        changelog = {
+            'added_homes': [{'name': n, 'doors': d, 'pod': p, 'km': k,
+                             'source': s, 'why': w}
+                            for n, d, p, k, s, w in added_homes],
+            'removed': removed, 'dropped_homes': dropped_homes,
+            'added_doors': len(added_doors),
+            'from_source': os.path.basename(report), 'on': asof,
+            'applied': datetime.date.today().isoformat()}
+    else:
+        changelog = prev_audit.get('changelog') or {
+            'added_homes': [], 'removed': [], 'dropped_homes': [],
+            'added_doors': 0, 'from_source': os.path.basename(report),
+            'on': asof, 'applied': datetime.date.today().isoformat()}
+
     audit = {
         'kind': 'rentroll', 'asof': asof, 'source': os.path.basename(report),
+        'changelog': changelog,
         'lease_rows': lease_rows, 'all_doors': all_doors,
         'excluded': excluded,
         'duplicate_records': dupes,
         'not_a_door': [
             {'code': c, 'unit': u} for c, u, s in R['notdoors']],
+        # Codes the roll carries but deliberately excludes, so a later pass
+        # (the ILS listing check) can tell "off-boarded" from "never heard of".
+        'offboard_codes': sorted({d['code'] for d in doors_all
+                                  if d['code'] and d['offboard']}),
+        'internal_codes': sorted({d['code'] for d in doors_all
+                                  if d['code'] and d['internal']}),
+        'roll_codes': sorted({d['code'] for d in doors_all if d['code']}),
         'doors_raw': len(active), 'doors': doors,
         'matched': matched, 'added_doors': len(added_doors),
         'added_homes': [{'name': n, 'doors': d, 'pod': p, 'km': k,
@@ -300,6 +385,7 @@ def main():
           % (before_doors, after_doors, before_vac, after_vac, pct))
     print('  status flips: %d newly vacant, %d newly leased'
           % (len(flips['to_vacant']), len(flips['to_rented'])))
+    print('  pins stamped with a Buildium code: %d' % stamped)
     print('  doors added to existing pins : %d' % len(added_doors))
     print('  properties added             : %d' % len(added_homes))
     for n, d, p, k, s, w in added_homes:
@@ -318,8 +404,7 @@ def main():
         print('\n--check: no files written')
         return
     out = json.dumps(blob, ensure_ascii=False, separators=(',', ':'))
-    open(HTML, 'w', encoding='utf-8').write(
-        raw[:m.start(2)] + out + raw[m.end(2):])
+    write_html(raw[:m.start(2)] + out + raw[m.end(2):])
     print('\nwrote %s' % os.path.normpath(HTML))
 
 
