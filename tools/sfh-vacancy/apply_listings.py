@@ -33,8 +33,15 @@ import csv, json, os, re, sys, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from resolve import nz, unit_tokens
 
-HTML = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                    '..', '..', 'sfh', 'index.html')
+HERE = os.path.dirname(os.path.abspath(__file__))
+HTML = os.path.join(HERE, '..', '..', 'sfh', 'index.html')
+# The canonical listing -> door mapping. One row per (ILS Unit ID, door).
+# A listing legitimately covers MORE THAN ONE door ("B1 & B2"), so this is a
+# many-to-many table, not a column on either side. Once a pair is confirmed it
+# is never guessed again — the ILS Unit ID is stable (225/225 distinct), the
+# listing TITLE is not (only 67 of 225 lead titles still match a live listing).
+CROSSWALK = os.path.join(HERE, 'listing_crosswalk.csv')
+CW_FIELDS = ['ils_unit_id', 'scope', 'unit', 'source', 'confirmed_on', 'note']
 BLOB_RE = re.compile(
     r'(<script id="data" type="application/json">)(.*?)(</script>)', re.S)
 # Listing titles sometimes sub-designate a code with a trailing letter —
@@ -46,6 +53,40 @@ LEAD_WINDOW = 30
 
 def codes_in(text):
     return sorted({re.sub(r'\s+', '', c).upper() for c in CODE_RE.findall(text or '')})
+
+
+def read_crosswalk():
+    if not os.path.exists(CROSSWALK):
+        return {}
+    out = {}
+    for r in csv.DictReader(open(CROSSWALK, encoding='utf-8-sig')):
+        uid = (r.get('ils_unit_id') or '').strip()
+        if not uid:
+            continue
+        out.setdefault(uid, []).append(r)
+    return out
+
+
+def confirmed_only(cw):
+    """Only a row a person has signed off is authoritative. Proposals stay in
+    the file so they can be ticked, but they are re-derived every run — a guess
+    that silently hardens into evidence is how the door-count dispute started."""
+    out = {}
+    for uid, rs in cw.items():
+        ok = [r for r in rs if (r.get('confirmed_on') or '').strip()]
+        if ok:
+            out[uid] = ok
+    return out
+
+
+def write_crosswalk(rows):
+    tmp = CROSSWALK + '.tmp'
+    with open(tmp, 'w', encoding='utf-8', newline='') as fh:
+        w = csv.DictWriter(fh, fieldnames=CW_FIELDS)
+        w.writeheader()
+        for r in sorted(rows, key=lambda r: (r['scope'], r['unit'], r['ils_unit_id'])):
+            w.writerow({k: r.get(k, '') for k in CW_FIELDS})
+    os.replace(tmp, CROSSWALK)
 
 
 def load():
@@ -115,6 +156,10 @@ def main():
     roll_codes = set(audit.get('roll_codes') or [])
     idx = door_index(homes)
 
+    window = int(audit.get('marketing_window') or 0)
+    if not window:
+        sys.exit('REFUSE: the page carries no marketing window — re-run '
+                 'apply_rentroll.py so door availability states are present.')
     rows = list(csv.DictReader(open(unit_csv, encoding='utf-8-sig')))
     if not rows or 'Status' not in rows[0]:
         sys.exit('REFUSE: %s has no Status column — is this the ILS unit list?'
@@ -140,19 +185,35 @@ def main():
                 if d and d > last_by_code.get(c, ''):
                     last_by_code[c] = d
 
+    cw_all = read_crosswalk()
+    cw = confirmed_only(cw_all)
+    cw_rows, cw_new, cw_kept = [], 0, 0
+
+    def door_key(i, ui):
+        h = homes[i]
+        return (h.get('code') or '', homes[i]['units'][ui]['unit'])
+
+    def marketable(d):
+        """A door worth advertising: empty now, or empty inside the marketing
+        window with nothing lined up. 'Rented' alone is NOT a reason to pull an
+        ad — a lease ending in three weeks is exactly what leasing is selling."""
+        u = homes[d[0]]['units'][d[1]]
+        return u.get('state') in ('vacant', 'expiring')
+
     turn_off, check_list, live, unmatched = [], [], 0, []
     for r in enabled:
         title = (r.get('Property Name') or '').strip()
         cs = codes_in(title)
         unum = (r.get('Unit #') or '').strip()
+        uid = (r.get('Unit ID') or '').strip()
         doors = [d for c in cs for d in idx.get(c, [])]
         known = [c for c in cs if c in idx]
         gone = [c for c in cs if c not in idx]
-        vac = [d for d in doors if homes[d[0]]['units'][d[1]]['status'] == 'Vacant']
+        avail = [d for d in doors if marketable(d)]
         pins = sorted({homes[i]['name'] for i, _ in doors})
         lead30 = sum(leads_by_code.get(c, 0) for c in cs)
         last = max([last_by_code.get(c, '') for c in cs] or [''])
-        item = {'title': title, 'codes': cs, 'unit': unum,
+        item = {'title': title, 'codes': cs, 'unit': unum, 'ils_id': uid,
                 'rent': (r.get('Rent') or '').strip(),
                 'beds': (r.get('Bedrooms') or '').strip(),
                 'pins': pins, 'leads30': lead30, 'last_lead': last}
@@ -171,27 +232,49 @@ def main():
             turn_off.append(item)
             continue
 
-        if not vac:
-            item['why'] = ('every door at %s is leased'
-                           % (', '.join(pins[:2]) or ', '.join(known)))
+        # Resolve the ad to specific doors: the crosswalk first, and only then
+        # a guess from the unit id.
+        mapped = []
+        if uid in cw:
+            want = {(x['scope'], x['unit']) for x in cw[uid]}
+            mapped = [d for d in doors if door_key(*d) in want]
+            item['via'] = 'crosswalk (confirmed)'
+            for x in cw[uid]:
+                cw_rows.append(x)
+                cw_kept += 1
+        if not mapped and unum:
+            mapped = unit_hits(homes, doors, unum)
+            item['via'] = 'unit id (proposed)' if mapped else ''
+            prev = {(x['scope'], x['unit']): x for x in cw_all.get(uid, [])}
+            for d in mapped:
+                sc, un = door_key(*d)
+                cw_rows.append(prev.get((sc, un)) or {
+                    'ils_unit_id': uid, 'scope': sc, 'unit': un,
+                    'source': 'proposed: matched on unit id',
+                    'confirmed_on': '', 'note': title[:80]})
+                cw_new += 1
+
+        if not avail:
+            item['why'] = ('every door at %s is leased past the %d-day window'
+                           % (', '.join(pins[:2]) or ', '.join(known),
+                              window))
             if gone:
                 item['why'] += ' (and %s is off-boarded)' % ', '.join(gone)
             turn_off.append(item)
             continue
 
-        if unum:
-            hits = unit_hits(homes, doors, unum)
-            if hits and not any(homes[i]['units'][ui]['status'] == 'Vacant'
-                                for i, ui in hits):
-                item['why'] = ('unit %s reads as leased, though %d other door(s) '
-                               'here are vacant' % (unum, len(vac)))
+        if mapped:
+            if not any(marketable(d) for d in mapped):
+                soon = len(avail)
+                item['why'] = ('the advertised door is taken; %d other door(s) '
+                               'here are available' % soon)
                 check_list.append(item)
                 continue
-            if not hits:
-                item['why'] = ('unit "%s" is not a door id on the map; %d vacant '
-                               'here' % (unum, len(vac)))
-                check_list.append(item)
-                continue
+        elif unum:
+            item['why'] = ('unit "%s" is not a door id on the map; %d available '
+                           'here' % (unum, len(avail)))
+            check_list.append(item)
+            continue
         live += 1
 
     # ---- the counterpart: vacancy with no live ad -------------------------
@@ -201,11 +284,11 @@ def main():
         hc = ([h['code']] if h.get('code') else []) + list(h.get('codes') or [])
         if any(c in advertised for c in hc):
             continue
-        n = sum(1 for u in h['units'] if u['status'] == 'Vacant')
+        n = sum(1 for u in h['units'] if u.get('state') in ('vacant', 'expiring'))
         if n:
             no_ad.append({'home': h['name'], 'code': h.get('code') or '',
-                          'vacant': n})
-    no_ad.sort(key=lambda x: -x['vacant'])
+                          'available': n})
+    no_ad.sort(key=lambda x: -x['available'])
 
     for lst in (turn_off, check_list):
         lst.sort(key=lambda x: (-x['leads30'], x['title']))
@@ -216,9 +299,12 @@ def main():
         'leads_asof': leads_dated, 'leads_window': LEAD_WINDOW,
         'leads_total': leads_total,
         'listings': len(rows), 'enabled': len(enabled), 'disabled': disabled,
+        'window': window,
+        'crosswalk_confirmed': cw_kept, 'crosswalk_proposed': cw_new,
+        'states': audit.get('states') or {},
         'turn_off': turn_off, 'check': check_list, 'live': live,
         'unmatched': unmatched, 'no_ad': no_ad,
-        'no_ad_doors': sum(x['vacant'] for x in no_ad),
+        'no_ad_doors': sum(x['available'] for x in no_ad),
         'generated': datetime.date.today().isoformat(),
     }
     if len(turn_off) + len(check_list) + live + len(unmatched) != len(enabled):
@@ -226,18 +312,25 @@ def main():
                  'enabled listings' % (len(turn_off), len(check_list), live,
                                        len(unmatched), len(enabled)))
     blob['ads'] = ads
+    if not check:
+        write_crosswalk(cw_rows)
 
     print('listings %s — %d rows, %d enabled, %d disabled'
           % (ads['source'], ads['listings'], ads['enabled'], ads['disabled']))
     if leads_csv:
         print('leads %s — %d rows to %s (%d-day window)'
               % (ads['leads_source'], leads_total, leads_dated, LEAD_WINDOW))
+    print('  marketing window: %d days   (%s)'
+          % (window, ', '.join('%s %d' % kv for kv in sorted(
+              (audit.get('states') or {}).items()))))
     print('  TURN OFF : %d  (still pulling %d leads in the last %dd)'
           % (len(turn_off), sum(i['leads30'] for i in turn_off), LEAD_WINDOW))
+    print('  crosswalk: %d confirmed + %d proposed = %d rows -> %s'
+          % (cw_kept, cw_new, len(cw_rows), os.path.basename(CROSSWALK)))
     print('  check    : %d' % len(check_list))
     print('  live/ok  : %d' % live)
     print('  unmatched: %d' % len(unmatched))
-    print('  vacant doors with no live ad: %d across %d properties'
+    print('  available doors with no live ad: %d across %d properties'
           % (ads['no_ad_doors'], len(no_ad)))
     print()
     for i in turn_off:

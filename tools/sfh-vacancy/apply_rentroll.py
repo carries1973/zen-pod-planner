@@ -100,13 +100,21 @@ def assign_pod(blob, lat, lng):
 def door_unit(d, code):
     """A map unit built from a rent-roll door alone: status is authoritative,
     listing detail (sqft, pets, contacts, copy) simply does not exist here."""
+    extra = {}
+    if d.get('preleased'):
+        extra['preleased'] = d['preleased']
+    if d.get('avail'):
+        extra['avail'] = d['avail']
+    if d.get('lease_end'):
+        extra['lease_end'] = d['lease_end']
     return {'unit': d['unit'], 'beds': d['beds'], 'bath': d['bath'],
             'sqft': '0', 'rent': d['rent'] or '', 'deposit': '',
-            'status': d['status'], 'pets': '', 'parking': '', 'term': '',
+            'status': d['status'], 'state': d.get('state', ''),
+            'pets': '', 'parking': '', 'term': '',
             'email': '', 'phone': '', 'rr': 1,
             'desc': '%s | door taken from the Buildium rent roll; listing '
                     'detail is not in the Unit Summary extract.'
-                    % (code or d['scope'])}
+                    % (code or d['scope']), **extra}
 
 
 def main():
@@ -155,6 +163,17 @@ def main():
             u['preleased'] = d['preleased']
         else:
             u.pop('preleased', None)
+        # Availability window, alongside status — NOT folded into it. The VACANT
+        # tile keeps its meaning; 'expiring' is a separate marketing fact.
+        u['state'] = d['state']
+        if d['avail']:
+            u['avail'] = d['avail']
+        else:
+            u.pop('avail', None)
+        if d['lease_end']:
+            u['lease_end'] = d['lease_end']
+        else:
+            u.pop('lease_end', None)
         # fill blanks only — never let the roll's sparse row erase listing data
         for src, dst in (('beds', 'beds'), ('bath', 'bath'), ('rent', 'rent')):
             if d[src] and not u.get(dst):
@@ -360,6 +379,10 @@ def main():
         'unplaced': [{'scope': s, 'units': u, 'why': w} for s, u, w in unplaceable],
         'unplaced_doors': gap, 'unplaced_vacant': unplaced_vac,
         'roll_vacant': roll_vac, 'notdoor_vacant': notdoor_vac,
+        'marketing_window': rrlib.MARKETING_WINDOW_DAYS,
+        'states': {s: sum(1 for h in homes for u in h['units']
+                          if u.get('state') == s)
+                   for s in ('vacant', 'expiring', 'preleased', 'leased')},
         'removed': removed, 'dropped_homes': dropped_homes,
         'vacant': after_vac, 'map_doors': after_doors,
         'generated': datetime.date.today().isoformat(),
@@ -379,6 +402,10 @@ def main():
     print('  BRIDGE  %d active doors - %d non-door = %d' % (len(active), notdoor, doors))
     print('          %d matched on the map + %d added + %d unplaced = %d  OK'
           % (matched, newdoors, gap, doors))
+    print('  STATE   %s' % ', '.join(
+        '%s %d' % (s, sum(1 for h in homes for u in h['units']
+                          if u.get('state') == s))
+        for s in ('vacant', 'expiring', 'preleased', 'leased')))
     print('  VACANT  %d in the roll - %d non-door - %d unplaced = %d on the map'
           % (roll_vac, notdoor_vac, unplaced_vac, after_vac))
     print('  doors   %d -> %d      vacant %d -> %d      occupancy %.1f%%'

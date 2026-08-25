@@ -147,6 +147,29 @@ def parse(path):
                   'kind': 'rentroll'}
 
 
+# How far ahead marketing works. A door whose lease expires inside this window
+# with nothing replacing it SHOULD be advertised — it is not a dead ad.
+MARKETING_WINDOW_DAYS = 60
+
+
+def _plus(day, n=1):
+    import datetime
+    try:
+        return (datetime.date.fromisoformat(day)
+                + datetime.timedelta(days=n)).isoformat()
+    except (ValueError, TypeError):
+        return ''
+
+
+def _within(day, asof, n):
+    import datetime
+    try:
+        return 0 <= (datetime.date.fromisoformat(day)
+                     - datetime.date.fromisoformat(asof)).days <= n
+    except (ValueError, TypeError):
+        return False
+
+
 def to_doors(recs, asof):
     """Collapse lease rows onto DOORS.
 
@@ -194,7 +217,23 @@ def to_doors(recs, asof):
         # the door today, but never let a blank current row erase a known value
         bedbath = src['bedbath'] or next((r['bedbath'] for r in rs if r['bedbath']), '')
         beds, bath = _split_bedbath(bedbath)
-        doors.append({'scope': scope, 'unit': unit, 'code': rs[0]['code'],
+        # Availability is a WINDOW, not a boolean. 'Rented' does not mean "do
+        # not advertise": a lease ending inside the marketing window with no
+        # replacement is exactly what leasing should be working on, and calling
+        # those ads dead tells staff to switch off live demand.
+        if status == 'Vacant':
+            state = 'preleased' if pre else 'vacant'
+            avail = asof if not pre else ''
+        elif pre:
+            state, avail = 'preleased', ''
+        elif src['lease_end'] and _within(src['lease_end'], asof,
+                                          MARKETING_WINDOW_DAYS):
+            state, avail = 'expiring', _plus(src['lease_end'])
+        else:
+            state, avail = 'leased', (_plus(src['lease_end'])
+                                      if src['lease_end'] else '')
+        doors.append({'state': state, 'avail': avail,
+                      'scope': scope, 'unit': unit, 'code': rs[0]['code'],
                       'offboard': rs[0]['offboard'], 'internal': rs[0]['internal'],
                       'status': status, 'preleased': pre,
                       'bedbath': bedbath, 'beds': beds, 'bath': bath,
