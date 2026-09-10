@@ -1077,7 +1077,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   // map
   const map=L.map('map',{zoomControl:true}).setView([53.4,-113.5],6);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap · © CARTO'}).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,attribution:'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'}).addTo(map);
 
   const money=n=>n==null?'—':'$'+Number(n).toLocaleString();
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');

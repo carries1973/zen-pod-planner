@@ -899,7 +899,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   document.getElementById('s-p').textContent=D.pods.filter(p=>mf.some(b=>b.pod===p.id)).length;
   document.getElementById('s-u').textContent=mf.reduce((a,b)=>a+(b.dispUnits||b.units||0),0).toLocaleString();
   const map=L.map('map',{zoomControl:true}).setView([53.4,-113.5],6); window._map=map;
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap · © CARTO'}).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,attribution:'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'}).addTo(map);
   const segLayers={AB:L.layerGroup().addTo(map),Balto:L.layerGroup().addTo(map),Vintage:L.layerGroup().addTo(map)},sfhLayer=L.layerGroup(),pts=[];
   const rad=v=>Math.max(5,Math.min(26,2+Math.sqrt(v||0)*1.25));
   const num=n=>n==null?'—':Number(n).toLocaleString();
