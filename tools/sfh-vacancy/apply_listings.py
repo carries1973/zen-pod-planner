@@ -305,6 +305,11 @@ def main():
         'turn_off': turn_off, 'check': check_list, 'live': live,
         'unmatched': unmatched, 'no_ad': no_ad,
         'no_ad_doors': sum(x['available'] for x in no_ad),
+        # The door set these calls were computed against. apply_rentroll.py
+        # compares it with the map's current door count and marks this block
+        # stale when they diverge, so a worklist can never outlive the map it
+        # describes.
+        'map_doors': sum(len(h['units']) for h in blob['homes']),
         'generated': datetime.date.today().isoformat(),
     }
     if len(turn_off) + len(check_list) + live + len(unmatched) != len(enabled):

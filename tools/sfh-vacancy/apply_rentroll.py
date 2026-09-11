@@ -97,9 +97,90 @@ def assign_pod(blob, lat, lng):
     return (bid if best <= 30 else -1), best
 
 
-def door_unit(d, code):
-    """A map unit built from a rent-roll door alone: status is authoritative,
-    listing detail (sqft, pets, contacts, copy) simply does not exist here."""
+def spec_from_source(ds):
+    """Build a new-pin spec from the door records themselves, when the source
+    carries a real address. Returns None when it does not, so the caller falls
+    back to NEW_PROPS and then to naming the property as unplaceable.
+
+    The address column includes the door suffix ('531 Merlin Landing NW - #40 -
+    Upper'), so the street is the part before the first ' - '. City and postal
+    are taken verbatim -- they are stated by Buildium, not inferred.
+
+    Property TYPE is still a guess, and is labelled as one. It is cosmetic here:
+    it drives the map's type filter, not any count.
+    """
+    street = ''
+    city = postal = ''
+    for d in ds:
+        if d.get('addr_full') and d.get('city'):
+            street = d['addr_full'].split(' - ')[0].strip()
+            city, postal = d['city'].strip(), (d.get('postal') or '').strip()
+            break
+    if not street or not city:
+        return None
+    n = len(ds)
+    ids = ' '.join(d['unit'].lower() for d in ds)
+    if n == 1:
+        ptype, why = 'Single-Family House', 'single whole door'
+    elif 'main' in ids and 'bsmt' in ids:
+        ptype, why = 'Single-Family House', 'Main/Bsmt door ids read as suited houses'
+    elif n >= 6:
+        ptype, why = 'Apartment', '%d doors reads as a multiplex' % n
+    else:
+        ptype, why = 'Townhouse', '%d doors, no Main/Bsmt split' % n
+    return {'query': '%s, %s, AB' % (street, city), 'city': city,
+            'postal': postal, 'name': street, 'type': ptype,
+            'why': 'address, city and postal (%s) stated by the Buildium API '
+                   'export; type inferred: %s' % (postal or 'none', why)}
+
+
+def apply_extract(u, ex):
+    """Layer vacant_extracted.csv onto a door the SPINE already proved exists.
+
+    Only ever enrichment, never the source of truth for status: that file lists
+    vacant doors only, and treating a vacancy-only file as a spine is how a
+    parse failure comes to look like a lease.
+
+    Two things here existed in no earlier source:
+      * a real ASKING rent for a vacant door. A rent roll's Rent column is
+        contract rent and a vacant door has no contract, which is why 152 of
+        205 vacant doors carried no rent on the Aug-24 build.
+      * MAKE-READY state. A door can be vacant and not showable; 'ready' and
+        the open work orders blocking it are the difference between a vacancy
+        leasing can work and one maintenance still owns.
+    """
+    if not ex:
+        return
+    if ex.get('ask'):
+        u['ask'] = ex['ask']
+        if not u.get('rent'):
+            u['rent'] = ex['ask']
+    for src, dst in (('deposit', 'deposit'), ('pets', 'pets'),
+                     ('parking', 'parking'), ('term', 'term'),
+                     ('email', 'email'), ('incentive', 'incentive'),
+                     ('utilities', 'utilities'), ('agent', 'agent'),
+                     ('available', 'avail_listed')):
+        if ex.get(src) and not u.get(dst):
+            u[dst] = ex[src]
+    if ex.get('sqft') and u.get('sqft') in (None, '', '0'):
+        u['sqft'] = ex['sqft']
+    if ex.get('ready'):
+        u['ready'] = ex['ready']
+    if ex.get('blocker') and ex.get('ready') != 'Yes':
+        u['blocker'] = ex['blocker']
+    if ex.get('listed'):
+        u['listed'] = 1
+    if ex.get('application') and ex['application'] not in ('None', ''):
+        u['application'] = ex['application']
+        if ex.get('applicants') and ex['applicants'] != '0':
+            u['applicants'] = ex['applicants']
+    if ex.get('desc') and not u.get('desc_full'):
+        u['desc_full'] = ex['desc']
+
+
+def door_unit(d, code, ex=None):
+    """A map unit built from a Buildium door. Status is authoritative; listing
+    detail comes from the vacancy extract where that file covers the door."""
     extra = {}
     if d.get('preleased'):
         extra['preleased'] = d['preleased']
@@ -107,14 +188,16 @@ def door_unit(d, code):
         extra['avail'] = d['avail']
     if d.get('lease_end'):
         extra['lease_end'] = d['lease_end']
-    return {'unit': d['unit'], 'beds': d['beds'], 'bath': d['bath'],
-            'sqft': '0', 'rent': d['rent'] or '', 'deposit': '',
-            'status': d['status'], 'state': d.get('state', ''),
-            'pets': '', 'parking': '', 'term': '',
-            'email': '', 'phone': '', 'rr': 1,
-            'desc': '%s | door taken from the Buildium rent roll; listing '
-                    'detail is not in the Unit Summary extract.'
-                    % (code or d['scope']), **extra}
+    u = {'unit': d['unit'], 'beds': d['beds'], 'bath': d['bath'],
+         'sqft': d.get('sqft') or '0', 'rent': d['rent'] or '', 'deposit': '',
+         'status': d['status'], 'state': d.get('state', ''),
+         'pets': '', 'parking': '', 'term': '',
+         'email': '', 'phone': '', 'rr': 1,
+         'desc': '%s | door taken from the Buildium export; listing '
+                 'detail is present only where the vacancy extract covers it.'
+                 % (code or d['scope']), **extra}
+    apply_extract(u, ex)
+    return u
 
 
 def main():
@@ -140,6 +223,8 @@ def main():
     for miss in R['misses']:
         miss['code'] = SCOPE_CODE.get(miss['scope'], miss['code'])
     asof = R['meta']['asof']
+    # Vacancy extract, keyed (scope, unit). Empty for the xlsx sources.
+    EX = R['meta'].get('extract') or {}
     active = R['active']
     doors_all = R['doors']
 
@@ -178,6 +263,16 @@ def main():
         for src, dst in (('beds', 'beds'), ('bath', 'bath'), ('rent', 'rent')):
             if d[src] and not u.get(dst):
                 u[dst] = d[src]
+        if d.get('sqft') and u.get('sqft') in (None, '', '0'):
+            u['sqft'] = d['sqft']
+        # A door that is no longer vacant must not keep last run's asking rent,
+        # make-ready blocker or applicant — those describe a vacancy that ended.
+        if status != 'Vacant':
+            for k in ('ask', 'ready', 'blocker', 'listed', 'application',
+                      'applicants', 'avail_listed'):
+                u.pop(k, None)
+        else:
+            apply_extract(u, EX.get((scope, unit)))
 
     # ---- 2. doors the roll has and the pin does not: add them --------------
     added_doors = []
@@ -185,7 +280,9 @@ def main():
         if miss['home'] is None:
             continue
         h = homes[miss['home']]
-        h['units'].append(door_unit(miss['door'], miss['code']))
+        h['units'].append(door_unit(
+            miss['door'], miss['code'],
+            EX.get((miss['scope'], miss['unit']))))
         if not h.get('code') and miss['code']:
             h['code'] = miss['code']
         added_doors.append((h['name'], miss['unit'], miss['door']['status']))
@@ -197,12 +294,21 @@ def main():
         if miss['home'] is None:
             noscope.setdefault(miss['scope'], []).append(miss['door'])
     for scope, ds in sorted(noscope.items()):
-        spec = NEW_PROPS.get(scope)
+        # Prefer the SOURCE's own address/city/postal over the hand-kept
+        # NEW_PROPS table. The rent-roll xlsx carried no city, so every new
+        # property needed a human to infer one into NEW_PROPS and each inference
+        # was a chance to be wrong; the Buildium API export states address, city
+        # and postal per door. Reading them closes new properties automatically
+        # instead of one hand-written entry at a time -- and it placed SF166
+        # "260230 RR 293", unplaceable since the Aug-20 build, because the API
+        # says Balzac T4B 2T3 where the scope label says only a range road.
+        spec = NEW_PROPS.get(scope) or spec_from_source(ds)
         if not spec:
             unplaceable.append((scope, [d['unit'] for d in ds],
                                 'no pin on the map and no location supplied'))
             continue
-        got = geocode.lookup(spec['query'], spec['city'])
+        got = geocode.lookup(spec['query'], spec['city'],
+                             postal=spec.get('postal'))
         if not got:
             unplaceable.append((scope, [d['unit'] for d in ds],
                                 'geocoder could not place %r' % spec['query']))
@@ -216,7 +322,8 @@ def main():
                                      ' ' + postal if postal else ''),
             'city': spec['city'], 'lat': lat, 'lng': lng, 'pod': pod,
             'code': code, 'rr': 1,
-            'units': [door_unit(d, code) for d in ds]})
+            'units': [door_unit(d, code, EX.get((scope, d['unit'])))
+                      for d in ds]})
         added_homes.append((spec['name'], len(ds), pod, round(dist, 1),
                             src, spec['why']))
 
@@ -358,7 +465,8 @@ def main():
             'on': asof, 'applied': datetime.date.today().isoformat()}
 
     audit = {
-        'kind': 'rentroll', 'asof': asof, 'source': os.path.basename(report),
+        'kind': R['meta'].get('kind', 'rentroll'), 'asof': asof,
+        'source': os.path.basename(report),
         'changelog': changelog,
         'lease_rows': lease_rows, 'all_doors': all_doors,
         'excluded': excluded,
@@ -388,6 +496,29 @@ def main():
         'generated': datetime.date.today().isoformat(),
     }
     blob['audit'] = audit
+
+    # The ads worklist was computed by apply_listings.py against the door set as
+    # it stood THEN. If this run changed which doors exist, that worklist is
+    # answering a question about a map that no longer exists -- it can name a
+    # property this run just dropped, or miss one it just added. Mark it stale
+    # rather than let it keep rendering under a fresh as-of date: a month-old
+    # number presented as today's is the same failure as a wrong one.
+    # The invariant is NOT "did this run change anything" -- a no-op re-run would
+    # then clear a flag that is still true. It is "was this worklist computed
+    # against the door set that is on the map now". apply_listings.py stamps
+    # ads.map_doors; a block without that stamp predates the stamp and cannot
+    # prove it matches, so it is treated as stale.
+    if blob.get('ads'):
+        built_for = blob['ads'].get('map_doors')
+        if built_for == after_doors:
+            blob['ads'].pop('stale', None)
+        else:
+            blob['ads']['stale'] = {
+                'since': asof,
+                'why': ('it was built against %s while the map now holds %d door(s)'
+                        % ('%d door(s)' % built_for if built_for
+                           else 'a door set it did not record', after_doors)),
+                'fix': 'rerun apply_listings.py with a current ILS unit list'}
 
     pct = 100.0 * (after_doors - after_vac) / after_doors
     print('rent roll %s (as of %s)' % (os.path.basename(report), asof))

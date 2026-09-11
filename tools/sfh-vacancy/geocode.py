@@ -76,22 +76,65 @@ def _nominatim(q, city=None):
     return None
 
 
-def lookup(query, city=None, refresh=False):
-    """-> (lat, lng, source, postal) or None. Cached by exact query string."""
+def _nominatim_abbrev(q, city=None):
+    """Nominatim, but with street types abbreviated. OSM's Alberta data spells
+    some streets 'Ave NW' and some 'Avenue Northwest', and a miss on one form is
+    routinely a hit on the other — '11320 113A Avenue Northwest' failed while
+    '11320 113A Ave NW' resolves."""
+    a = _abbrev(q)
+    return None if a == q else _nominatim(a, city)
+
+
+def _postal(q, city=None, postal=None):
+    """Last resort: place the property by its POSTAL CODE.
+
+    A Canadian postal code resolves to a block face, not a building, so this is
+    less precise than an address fix and the caller is told so by the returned
+    source ('postal'). It is still far better than the alternative, which is a
+    property silently absent from the map: the 2026-09-11 Buildium export
+    carried a postal code for every unplaced property, including SF166
+    '260230 RR 293' — a rural range road with no civic address, unplaceable on
+    this map since the Aug-20 build, which Buildium states as Balzac T4B 2T3.
+    """
+    if not postal:
+        return None
+    u = ('https://nominatim.openstreetmap.org/search?format=json&limit=5&'
+         'addressdetails=1&countrycodes=ca&postalcode='
+         + urllib.parse.quote(postal))
+    for hit in _get(u):
+        lat, lng = float(hit['lat']), float(hit['lon'])
+        if _in_alberta(lat, lng):
+            return lat, lng, 'postal', postal, None
+    return None
+
+
+def lookup(query, city=None, refresh=False, postal=None):
+    """-> (lat, lng, source, postal) or None. Cached by exact query string.
+
+    `source` states HOW it was placed — 'geocoder.ca' and 'nominatim' are
+    address-level, 'postal' is a block-face approximation. Callers report it so
+    a coarse pin is never mistaken for a precise one.
+    """
     cache = _load()
-    if not refresh and query in cache:
-        v = cache[query]
+    key = query if not postal else '%s | postal=%s' % (query, postal)
+    if not refresh and key in cache:
+        v = cache[key]
         return tuple(v) if v else None
     got = None
-    for fn in (_geocoder_ca, _nominatim):
+    for fn in (_geocoder_ca, _nominatim, _nominatim_abbrev, _postal):
         try:
-            got = fn(query, city) if fn is _nominatim else fn(query)
+            if fn is _geocoder_ca:
+                got = fn(query)
+            elif fn is _postal:
+                got = fn(query, city, postal)
+            else:
+                got = fn(query, city)
         except Exception as e:                 # network/parse — try the next one
             print('  geocode %s failed for %r: %s' % (fn.__name__, query, e))
             got = None
         if got:
             break
         time.sleep(1.1)                        # Nominatim asks for 1 req/sec
-    cache[query] = list(got[:4]) if got else None
+    cache[key] = list(got[:4]) if got else None
     _save(cache)
     return tuple(got[:4]) if got else None

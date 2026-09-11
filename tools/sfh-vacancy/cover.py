@@ -11,6 +11,7 @@ Matching is property-first — a scope narrows to candidate homes, then doors ar
 matched inside those homes — because 1,465 doors searched globally produces
 plausible-looking cross-property matches.
 """
+import os
 import re
 from collections import defaultdict
 import vaclib
@@ -151,12 +152,27 @@ def resolve_all(blob, report_path):
     idx = build_index(homes)
     for x in idx:
         x['addr'] = home_addr(x['raw'])
-    recs, meta = vaclib.load(report_path)
-    if meta.get('kind') != 'rentroll':
-        raise SystemExit('REFUSE: cover.py needs a Rent Roll, got %r'
-                         % meta.get('kind'))
-    import rrlib
-    doors = rrlib.to_doors(recs, meta['asof'])
+    # ONE dispatch point for source shape. Everything below this line is
+    # source-agnostic and must stay that way: adding a source costs a loader,
+    # not a parallel copy of the resolution, the coverage control or the bridge.
+    if report_path.lower().endswith('.csv'):
+        # Buildium REST pull (zen-l2l pipeline/buildium_pull.py). Already at
+        # door grain and states both sides of every door, so there is no
+        # lease-grain collapse to do.
+        import apilib
+        recs = []          # no intermediate row layer: this source is door-grain
+        meta = {'kind': 'unitstate',
+                'asof': apilib.asof_from_path(report_path)}
+        doors = apilib.load_unit_state(report_path, meta['asof'])
+        meta['extract'] = apilib.load_vacant_extract(
+            os.path.join(os.path.dirname(report_path), 'vacant_extracted.csv'))
+    else:
+        recs, meta = vaclib.load(report_path)
+        if meta.get('kind') != 'rentroll':
+            raise SystemExit('REFUSE: cover.py needs a Rent Roll or a Buildium '
+                             'unit_state.csv, got %r' % meta.get('kind'))
+        import rrlib
+        doors = rrlib.to_doors(recs, meta['asof'])
     active = [d for d in doors if not d['offboard'] and not d['internal']]
     active, dupes = drop_duplicate_records(active)
 

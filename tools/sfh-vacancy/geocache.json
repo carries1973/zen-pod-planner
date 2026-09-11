@@ -1,9 +1,59 @@
 {
+ "10180 104 Street NW, Edmonton, AB": [
+  53.5425622,
+  -113.4997463,
+  "nominatim",
+  "T5J 1A7"
+ ],
+ "10180 104 Street NW, Edmonton, AB | postal=T2J 1A7": [
+  53.5425622,
+  -113.4997463,
+  "nominatim",
+  "T5J 1A7"
+ ],
  "11306 123 Street NW, Edmonton, AB": [
   53.562258,
   -113.534646,
   "geocoder.ca",
   "T5M0E9"
+ ],
+ "11320 113A Avenue Northwest, Edmonton, AB": null,
+ "11320 113A Avenue Northwest, Edmonton, AB | postal=T5G 0K2": [
+  53.5634405,
+  -113.5171374,
+  "nominatim",
+  "T5G 3E8"
+ ],
+ "12208 41 Street NW, Edmonton, AB": [
+  53.5768426,
+  -113.4046559,
+  "nominatim",
+  "T5W 1A3"
+ ],
+ "12208 41 Street NW, Edmonton, AB | postal=T5W 2M8": [
+  53.5768426,
+  -113.4046559,
+  "nominatim",
+  "T5W 1A3"
+ ],
+ "12824 123 Avenue Northwest, Edmonton, AB": [
+  53.5767564,
+  -113.5997334,
+  "nominatim",
+  "T5V 1B1"
+ ],
+ "12824 123 Avenue Northwest, Edmonton, AB | postal=T5L 1H5": [
+  53.5767564,
+  -113.5997334,
+  "nominatim",
+  "T5V 1B1"
+ ],
+ "13109 122A Avenue Northwest, Edmonton, AB": null,
+ "13109 122A Avenue Northwest, Edmonton, AB | postal=T5L 2W6": [
+  53.5778936,
+  -113.3965698,
+  "nominatim",
+  "T5W 1Z5"
  ],
  "13230 Fort Road NW, Edmonton, AB": [
   53.5779594,
@@ -11,17 +61,55 @@
   "nominatim",
   "T5B 2C9"
  ],
+ "260230 Range Road 293, Balzac, AB": null,
+ "260230 Range Road 293, Balzac, AB | postal=T4B 2T3": [
+  51.2159,
+  -114.004307,
+  "postal",
+  "T4B 2T3"
+ ],
  "4304 139 Avenue NW, Edmonton, AB": [
   53.6013803,
   -113.4088282,
   "nominatim",
   "T5Y 2W6"
  ],
+ "50 McLaughlin Drive, Spruce Grove, AB": [
+  53.5441553,
+  -113.9296338,
+  "nominatim",
+  "T7X 4P9"
+ ],
+ "50 McLaughlin Drive, Spruce Grove, AB | postal=T7X 0E1": [
+  53.5441553,
+  -113.9296338,
+  "nominatim",
+  "T7X 4P9"
+ ],
+ "531 Merlin Landing NW, Edmonton, AB": [
+  53.5844827,
+  -113.6923706,
+  "nominatim",
+  "T5S 0P9"
+ ],
+ "531 Merlin Landing NW, Edmonton, AB | postal=T5S 0V8": [
+  53.5844827,
+  -113.6923706,
+  "nominatim",
+  "T5S 0P9"
+ ],
  "7110 Keswick Common SW, Edmonton, AB": [
   53.41033,
   -113.62149,
   "geocoder.ca",
   "T6W5P7"
+ ],
+ "7927 71 Avenue Northwest, Edmonton, AB": null,
+ "7927 71 Avenue Northwest, Edmonton, AB | postal=T6C 0B1": [
+  53.5072225,
+  -113.4499216,
+  "nominatim",
+  "T6E 4N7"
  ],
  "87 Darlington Court, Sherwood Park, AB": [
   53.5504918,
