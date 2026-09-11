@@ -176,6 +176,50 @@ def apply_extract(u, ex):
             u['applicants'] = ex['applicants']
     if ex.get('desc') and not u.get('desc_full'):
         u['desc_full'] = ex['desc']
+    # Pod-mapping-only fields. rent_source matters: two doors can both say $1,750 and
+    # mean different things -- one read off a live listing, one the Buildium MarketRent
+    # field with no listing at all. A figure without its provenance invites a decision
+    # it cannot support.
+    for src, dst in (('rent_source', 'rent_src'), ('ready_date', 'ready_date'),
+                     ('avail_source', 'avail_src'), ('ils_status', 'ils'),
+                     ('ils_match', 'ils_match'), ('ils_conflicts', 'ils_conflicts'),
+                     ('amen', 'amen')):
+        if ex.get(src) and not u.get(dst):
+            u[dst] = ex[src]
+    if ex.get('avail_date'):
+        u['avail'] = ex['avail_date']
+    if ex.get('ils_live'):
+        u['listed'] = 1
+
+
+def classify_availability(u):
+    """Set u['avail_class']: VACANT is not the same question as AVAILABLE.
+
+    A door can be empty and not available (already committed to a tenant, or not
+    physically showable), and a door can be occupied and about to be available. The map
+    showed one VACANT tile that blended all of it, so "184 vacant" could not be acted on:
+    it is not 184 doors leasing can offer anyone.
+
+      available   empty, uncommitted, and showable        -> leasing can offer it today
+      not-ready   empty, uncommitted, make-ready open     -> maintenance owns it
+      committed   empty but pre-leased                    -> already gone
+      becoming    occupied, lease ends inside the window  -> the pipeline to work
+      leased      occupied, nothing ending                -> not in play
+
+    Deliberately NOT folded into 'status', which stays Buildium's own Occupied/Vacant.
+    Two facts, two fields; collapsing them is what made the tile unactionable.
+    """
+    if u.get('status') == 'Vacant':
+        if u.get('preleased'):
+            return 'committed'
+        # 'Unknown' readiness is not a blocker -- it means nobody has said. Treating it as
+        # not-ready would quietly shrink the available count on missing data.
+        if u.get('ready') == 'No':
+            return 'not-ready'
+        return 'available'
+    if u.get('state') == 'expiring':
+        return 'becoming'
+    return 'leased'
 
 
 def door_unit(d, code, ex=None):
@@ -201,8 +245,18 @@ def door_unit(d, code, ex=None):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith('--')]
-    check = '--check' in sys.argv
+    argv = sys.argv[1:]
+    check = '--check' in argv
+    # The enrichment file is passed BY NAME, never discovered by scanning a folder --
+    # sweeping ~/Downloads once copied 368 unrelated files into a source folder.
+    enrich_path = None
+    if '--enrich' in argv:
+        i = argv.index('--enrich')
+        if i + 1 >= len(argv):
+            sys.exit('REFUSE: --enrich needs a path')
+        enrich_path = os.path.expanduser(argv[i + 1])
+        argv = argv[:i] + argv[i + 2:]
+    args = [a for a in argv if not a.startswith('--')]
     if not args:
         sys.exit(__doc__)
     report = os.path.expanduser(args[0])
@@ -225,6 +279,16 @@ def main():
     asof = R['meta']['asof']
     # Vacancy extract, keyed (scope, unit). Empty for the xlsx sources.
     EX = R['meta'].get('extract') or {}
+    PODMAP, podmeta = {}, None
+    if enrich_path:
+        import apilib
+        PODMAP, podmeta = apilib.load_pod_mapping(enrich_path)
+        # The pod mapping is the better source wherever it covers a door: it carries the
+        # rent's provenance and the resolved ILS crosswalk. It is layered OVER the vacancy
+        # extract rather than replacing it, because it is stabilised-only and the extract
+        # still covers lease-up vacancies.
+        for key, e in PODMAP.items():
+            EX.setdefault(key, {}).update({k: v for k, v in e.items() if v not in ('', None)})
     active = R['active']
     doors_all = R['doors']
 
@@ -267,12 +331,29 @@ def main():
             u['sqft'] = d['sqft']
         # A door that is no longer vacant must not keep last run's asking rent,
         # make-ready blocker or applicant — those describe a vacancy that ended.
+        VACANCY_ONLY = ('ask', 'ready', 'blocker', 'listed', 'application',
+                        'applicants', 'avail_listed', 'ready_date')
         if status != 'Vacant':
-            for k in ('ask', 'ready', 'blocker', 'listed', 'application',
-                      'applicants', 'avail_listed'):
+            for k in VACANCY_ONLY:
                 u.pop(k, None)
         else:
             apply_extract(u, EX.get((scope, unit)))
+        # Fields that describe the DOOR rather than a vacancy apply whatever its status
+        # is, and the pod-mapping export covers leased doors too. This was vacancy-only
+        # while the only enrichment was a vacancy report, so the pod file reached 72 of
+        # the 677 doors it covers: rent provenance and — the one that costs money — a
+        # live ILS listing carrying the wrong rent on an OCCUPIED door were both dropped.
+        if status != 'Vacant':
+            pod = EX.get((scope, unit)) or {}
+            for src, dst in (('rent_source', 'rent_src'), ('ils_status', 'ils'),
+                             ('ils_match', 'ils_match'),
+                             ('ils_conflicts', 'ils_conflicts'), ('amen', 'amen')):
+                if pod.get(src):
+                    u[dst] = pod[src]
+                else:
+                    u.pop(dst, None)
+            if pod.get('sqft') and u.get('sqft') in (None, '', '0'):
+                u['sqft'] = pod['sqft']
 
     # ---- 2. doors the roll has and the pin does not: add them --------------
     added_doors = []
@@ -464,8 +545,51 @@ def main():
             'added_doors': 0, 'from_source': os.path.basename(report),
             'on': asof, 'applied': datetime.date.today().isoformat()}
 
+    # ---- availability class on every door, and the counts that must reconcile ----
+    for h in homes:
+        for u in h['units']:
+            u['avail_class'] = classify_availability(u)
+    avail_counts = Counter(u['avail_class'] for h in homes for u in h['units'])
+    # VACANT must still equal the sum of its parts, on the page.
+    vac_parts = (avail_counts['available'] + avail_counts['not-ready']
+                 + avail_counts['committed'])
+    if vac_parts != after_vac:
+        sys.exit('REFUSE: availability split does not reconcile — %d available + %d '
+                 'not-ready + %d committed = %d, but %d doors are Vacant'
+                 % (avail_counts['available'], avail_counts['not-ready'],
+                    avail_counts['committed'], vac_parts, after_vac))
+
+    # ---- advertising worklist, from the resolved ILS crosswalk -------------
+    if PODMAP:
+        import apilib
+        ads = apilib.ads_from_pod_mapping(PODMAP, asof)
+        blob['ads'] = {
+            'source': podmeta['source'],
+            'basis': 'ILS crosswalk resolved per door in the pod-mapping export; '
+                     'availability treated as a window, not a flag.',
+            'window': ads['window'], 'asof': ads['asof'],
+            'enabled': ads['enabled'],
+            'turn_off': ads['turn_off'], 'keep_live': ads['keep_live'],
+            'advertised_vacant': ads['advertised_vacant'], 'check': ads['check'],
+            'no_ad': ads['no_ad'],
+            # Stabilised-only coverage: lease-up doors are not in this export, so their
+            # ad state is UNKNOWN rather than clean. Said, not implied.
+            'coverage': {'doors_covered': podmeta['rows'],
+                         'map_doors': after_doors,
+                         'uncovered': after_doors - podmeta['rows'],
+                         'why': 'the pod-mapping export is the stabilised bucket only; '
+                                'lease-up doors carry no ILS state here'},
+            'map_doors': after_doors,
+            'generated': datetime.date.today().isoformat(),
+        }
+        if (len(ads['turn_off']) + len(ads['keep_live']) + len(ads['advertised_vacant'])
+                + len(ads['check'])) != ads['enabled']:
+            sys.exit('REFUSE: ad buckets do not sum to the enabled-listing count')
+
     audit = {
         'kind': R['meta'].get('kind', 'rentroll'), 'asof': asof,
+        'availability': dict(avail_counts),
+        'enrich': podmeta,
         'source': os.path.basename(report),
         'changelog': changelog,
         'lease_rows': lease_rows, 'all_doors': all_doors,
@@ -541,6 +665,26 @@ def main():
           % (roll_vac, notdoor_vac, unplaced_vac, after_vac))
     print('  doors   %d -> %d      vacant %d -> %d      occupancy %.1f%%'
           % (before_doors, after_doors, before_vac, after_vac, pct))
+    print('  AVAILABLE  %d can be offered today  (+ %d empty but not make-ready, '
+          '%d empty and already committed) = %d vacant'
+          % (avail_counts['available'], avail_counts['not-ready'],
+             avail_counts['committed'], after_vac))
+    print('             %d more becoming available within %d days (lease ending, no '
+          'replacement)' % (avail_counts['becoming'], rrlib.MARKETING_WINDOW_DAYS))
+    if podmeta:
+        print('  ENRICHED   %d of %d doors from %s (%d uncovered — lease-up is not in '
+              'that export)'
+              % (podmeta['rows'], after_doors, podmeta['source'],
+                 after_doors - podmeta['rows']))
+        a = blob['ads']
+        print('  ADS        %d live listing(s): %d to turn off, %d KEEP LIVE (lease ends '
+              'inside the window), %d correctly on a vacant door, %d to check'
+              % (a['enabled'], len(a['turn_off']), len(a['keep_live']),
+                 len(a['advertised_vacant']), len(a['check'])))
+        for r in a['keep_live']:
+            print('               keep live: %-9s %-14s %s'
+                  % (r['scope'].split(' - ')[0][:9], r['unit'], r['why']))
+        print('             %d vacant door(s) with no live ad' % len(a['no_ad']))
     print('  status flips: %d newly vacant, %d newly leased'
           % (len(flips['to_vacant']), len(flips['to_rented'])))
     print('  pins stamped with a Buildium code: %d' % stamped)

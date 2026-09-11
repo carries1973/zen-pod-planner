@@ -175,3 +175,139 @@ def asof_from_path(path):
                          'source is dated by its pull folder; a file mtime is '
                          'not a report date.' % path)
     return m.group(1)
+
+
+# ---------------------------------------------------------------- pod mapping
+# A FOURTH shape: the consolidated per-door export Carrie produces from the Buildium
+# pull ("all_units_pod_mapping.csv"). The richest source this map has had --
+# authoritative rent WITH its provenance, the resolved ILS crosswalk, make-ready state,
+# live applications, and Buildium-vs-ILS conflicts already computed.
+#
+# IT IS THE STABILISED BUCKET ONLY, and that is the whole reason it cannot be the spine.
+# The 2026-09-11 file holds 677 doors and NONE of the 112 lease-up doors (RP27, Alces,
+# SF348/352/353/354). Read as "the door count" it would drop every lease-up door -- the
+# most actively-leasable inventory in the portfolio -- off the map. Carrie confirmed
+# 2026-09-11 that the map keeps the full in-scope count and this file supplies detail:
+#
+#   677 stabilised + 112 lease-up - 1 duplicate door - 1 non-door = 787 on the map.
+#
+# Doors it does not cover keep what the spine gave them and are COUNTED as uncovered, so
+# the gap is a figure on the page rather than a silent blank.
+
+_ILS_RESOLVED = ('exact', 'code-only')      # crosswalk strong enough to act on
+
+
+def load_pod_mapping(path):
+    """-> ({(scope, unit): enrichment}, meta)."""
+    out = {}
+    codes, scopes = set(), set()
+    with open(path, newline='', encoding='utf-8-sig') as fh:
+        rdr = csv.DictReader(fh)
+        need = {'property', 'unit', 'status', 'rent_authoritative', 'ils_status'}
+        missing = need - set(rdr.fieldnames or ())
+        if missing:
+            raise SystemExit('REFUSE: %s is not a pod-mapping export (missing %s)'
+                             % (os.path.basename(path), ', '.join(sorted(missing))))
+        for r in rdr:
+            scope = (r.get('property') or '').strip()
+            unit = (r.get('unit') or '').strip()
+            if not scope or not unit:
+                continue
+            codes.add((r.get('code') or '').strip())
+            scopes.add(scope)
+            ils_match = (r.get('ils_match') or '').strip()
+            out[(scope, unit)] = {
+                # Rent WITH its provenance. Two doors can both say $1,750 and mean
+                # different things -- one read off a live listing description, one the
+                # Buildium MarketRent field with no listing at all.
+                'ask': _f(r.get('rent_authoritative')),
+                'rent_source': (r.get('rent_source') or '').strip(),
+                'deposit': (r.get('listing_deposit') or '').strip()
+                           or (r.get('desc_deposit') or '').strip(),
+                'sqft': (r.get('sqft') or '').strip(),
+                'pets': (r.get('pets') or '').strip(),
+                'parking': (r.get('parking') or '').strip(),
+                'term': (r.get('lease_term') or '').strip(),
+                'incentive': (r.get('incentive') or '').strip(),
+                'utilities': (r.get('utilities') or '').strip(),
+                'agent': (r.get('agent') or '').strip(),
+                'email': (r.get('agent_email') or '').strip(),
+                'desc': (r.get('description') or '').strip(),
+                'amen': (r.get('unit_amenities') or '').strip(),
+                # Make-ready: whether the door can actually be shown.
+                'ready': (r.get('move_in_ready') or '').strip(),
+                'blocker': (r.get('move_in_blocker') or '').strip(),
+                'ready_date': (r.get('move_in_ready_date') or '').strip(),
+                'open_items': (r.get('open_work_detail') or '').strip(),
+                # Availability date AND how it was decided -- a date off a listing and a
+                # date derived from a lease end are not the same claim.
+                'avail_date': (r.get('available_date') or '').strip(),
+                'avail_source': (r.get('available_date_source') or '').strip(),
+                # Applications in the last 30 days.
+                'application': (r.get('application_status_30d') or '').strip(),
+                'has_application': (r.get('has_live_application') or '').strip() == 'Y',
+                'applicants': (r.get('applicants_30d') or '').strip(),
+                # The ILS crosswalk, already resolved upstream.
+                'ils_match': ils_match,
+                'ils_resolved': ils_match in _ILS_RESOLVED,
+                'ils_status': (r.get('ils_status') or '').strip(),
+                'ils_live': (r.get('ils_live') or '').strip() == 'Y',
+                'ils_unit_id': (r.get('ils_unit_id') or '').strip(),
+                'ils_conflicts': (r.get('ils_conflicts') or '').strip(),
+                'filled_from': (r.get('filled_from') or '').strip(),
+                'lease_to': (r.get('lease_to') or '').strip(),
+                'next_lease_from': (r.get('next_lease_from') or '').strip(),
+                'status': (r.get('status') or '').strip(),
+            }
+    return out, {'rows': len(out), 'codes': len(codes - {''}), 'scopes': len(scopes),
+                 'source': os.path.basename(path)}
+
+
+def ads_from_pod_mapping(enrich, asof, window=None):
+    """Derive the advertising worklist from the resolved ILS crosswalk.
+
+    Replaces the ILS-feed join apply_listings.py had to do by hand, because this export
+    already carries ils_unit_id / ils_status per door.
+
+    THE RULE THAT MATTERS: "leased" does NOT mean "pull the ad". A lease ending inside the
+    marketing window with no replacement is live demand, and switching that ad off tells
+    staff to stop working a door that is about to be empty. Five doors in the 2026-09-11
+    file are exactly that -- one of them a lease ending the next day. Availability is a
+    window, not a flag.
+
+    A door whose crosswalk is unresolved ('none'/'ambiguous') never produces a turn-off
+    call: killing an ad for a genuinely vacant door costs real money, so ambiguity goes to
+    a human. Every ILS-enabled door in the 2026-09-11 file happened to be resolved, but
+    the guard is the point, not the luck.
+    """
+    window = rrlib.MARKETING_WINDOW_DAYS if window is None else window
+    turn_off, keep_live, advertised_vacant, check = [], [], [], []
+    for (scope, unit), e in sorted(enrich.items()):
+        if e['ils_status'] != 'enabled':
+            continue                                   # not advertised; nothing to do
+        row = {'scope': scope, 'unit': unit, 'ils_unit_id': e['ils_unit_id'],
+               'match': e['ils_match'], 'ask': e['ask']}
+        if not e['ils_resolved']:
+            check.append(dict(row, why='ILS crosswalk is %r -- which door this ad points '
+                                       'at is not settled' % (e['ils_match'] or 'unknown')))
+        elif e['status'] != 'Occupied':
+            advertised_vacant.append(dict(row, why='vacant and advertised — correct'))
+        elif e['next_lease_from']:
+            turn_off.append(dict(row, why='pre-leased, next lease starts %s'
+                                          % e['next_lease_from']))
+        elif e['lease_to'] and rrlib._within(e['lease_to'], asof, window):
+            keep_live.append(dict(row, why='lease ends %s, inside the %d-day window and no '
+                                           'replacement — live demand'
+                                           % (e['lease_to'], window)))
+        elif e['lease_to']:
+            turn_off.append(dict(row, why='leased to %s, beyond the %d-day window'
+                                          % (e['lease_to'], window)))
+        else:
+            check.append(dict(row, why='occupied but no lease end on file'))
+    enabled = len(turn_off) + len(keep_live) + len(advertised_vacant) + len(check)
+    no_ad = sorted((s, u) for (s, u), e in enrich.items()
+                   if e['status'] != 'Occupied' and e['ils_status'] != 'enabled')
+    return {'turn_off': turn_off, 'keep_live': keep_live,
+            'advertised_vacant': advertised_vacant, 'check': check,
+            'enabled': enabled, 'no_ad': [{'scope': s, 'unit': u} for s, u in no_ad],
+            'window': window, 'asof': asof}
