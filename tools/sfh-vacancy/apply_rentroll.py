@@ -563,6 +563,19 @@ def main():
     if PODMAP:
         import apilib
         ads = apilib.ads_from_pod_mapping(PODMAP, asof)
+        # Attach the MAP PIN each ad belongs to. The worklist is keyed on Buildium's scope
+        # label, which the page has no way to resolve to a pin -- so the "Ads to pull"
+        # filter chip silently stopped rendering when this worklist replaced the old one.
+        # Resolve it here, where the scope->home mapping already exists from the match.
+        scope_homes = {}
+        for _c, _u, (_i, _ui), _scope, _st in R['hits']:
+            scope_homes.setdefault(_scope, set()).add(homes[_i]['name'])
+        for _m in R['misses']:
+            if _m['home'] is not None:
+                scope_homes.setdefault(_m['scope'], set()).add(homes[_m['home']]['name'])
+        for bucket in ('turn_off', 'keep_live', 'advertised_vacant', 'check'):
+            for row in ads[bucket]:
+                row['pins'] = sorted(scope_homes.get(row['scope'], ()))
         blob['ads'] = {
             'source': podmeta['source'],
             'basis': 'ILS crosswalk resolved per door in the pod-mapping export; '
