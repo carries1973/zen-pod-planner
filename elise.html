@@ -734,6 +734,13 @@ footer{color:var(--muted);font-size:13px;display:grid;gap:4px}
       <tbody id="reg"></tbody>
     </table>
   </div>
+  <h2 style="margin:8px 0 0;color:var(--teal);font-size:20px">Building directory</h2>
+  <div class="panel reg">
+    <table>
+      <thead><tr><th>Building</th><th>Pod</th><th>Address</th><th>City</th><th style="text-align:right">Doors</th><th style="text-align:right">Latitude</th><th style="text-align:right">Longitude</th><th>Map</th></tr></thead>
+      <tbody id="dir"></tbody>
+    </table>
+  </div>
   <footer>
     <div>Pods: ZEN Centralization Process Maps Vol. 2 v5, Map 9 v4 (Sept 25, 2026). Locations and drive times: ZEN Building Coordinates &amp; Drive Times, 2026-09-23 (measured, free-flow).</div>
     <div>Not in the v4 pod plan: The Residence, The Manning, Neu Manor, Crestmark Place, 10126 154 Street, Rivers Edge, TrailsEdge. No staffing, lease or resident information is shown.</div>
@@ -771,7 +778,7 @@ ORDER.forEach(p=>{const pts=B.filter(b=>b.pod===p),c=POD[p].c,g=L.layerGroup();
 B.slice().sort((a,b)=>b.doors-a.doors).forEach(b=>{const r=Math.max(5,Math.sqrt(b.doors)*0.9),c=POD[b.pod].c;
   const ring=isPilot(b)?L.circleMarker([b.lat,b.lon],{radius:r+5,color:'#E9A800',weight:3,fill:false,interactive:false}).addTo(map):null;
   const m=L.circleMarker([b.lat,b.lon],{radius:r,color:'#fff',weight:1.5,fillColor:c,fillOpacity:.9}).addTo(map);
-  m.bindTooltip(`${b.name} · ${b.pod} · ${b.doors} doors`);m.on('click',()=>select(b.code));markers.push({b,m,ring});});
+  m.bindTooltip(`<strong>${b.name}</strong><br>${b.addr||''}<br>${b.pod} · ${b.doors} doors`);m.on('click',()=>select(b.code));markers.push({b,m,ring});});
 const AREAS={Edmonton:B.filter(b=>b.market==='Edmonton'||['E1','E9'].includes(b.pod)),Calgary:B.filter(b=>b.market==='Calgary'||b.pod==='Cochrane'),Saskatoon:B.filter(b=>b.pod==='SK-Saskatoon'),Regina:B.filter(b=>b.pod==='SK-Regina'),all:B};
 function zoomTo(k){const l=AREAS[k];if(l.length===1)map.setView([l[0].lat,l[0].lon],14);else map.fitBounds(l.map(b=>[b.lat,b.lon]),{padding:[40,40]});document.querySelectorAll('.btn').forEach(x=>x.setAttribute('aria-pressed',x.dataset.z===k));}
 document.querySelectorAll('.btn').forEach(x=>x.addEventListener('click',()=>zoomTo(x.dataset.z)));
@@ -780,13 +787,15 @@ function select(code){const b=byCode[code],P=POD[b.pod];
   const mates=B.filter(x=>x.pod===b.pod&&x.code!==b.code).map(x=>({x,m:mins(b.code,x.code)})).sort((a,c)=>a.m-c.m);
   const near=B.filter(x=>x.pod!==b.pod).map(x=>({x,m:mins(b.code,x.code)})).filter(o=>o.m!=null).sort((a,c)=>a.m-c.m).slice(0,3);
   document.getElementById('detail').innerHTML=`<div><span class="chip" style="background:${P.c};color:#fff">${b.pod} · ${P.t}</span> ${isPilot(b)?'<span class="chip pilot">Pilot</span>':''}</div><h2>${b.name}</h2>
-  <dl class="kv"><dt>Address</dt><dd>${b.addr||'—'}</dd><dt>Doors</dt><dd>${b.doors}</dd><dt>Class</dt><dd>${b.section||'—'}</dd><dt>Yardi code</dt><dd>${b.code}</dd><dt>To ZEN office</dt><dd>${b.office_min??'—'} min</dd></dl>
+  <dl class="kv"><dt>Address</dt><dd>${b.addr||'—'}</dd><dt>GPS</dt><dd>${b.lat.toFixed(6)}, ${b.lon.toFixed(6)}</dd><dt>Map</dt><dd><a href="https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lon}" target="_blank" rel="noopener">Open in Google Maps</a></dd><dt>Doors</dt><dd>${b.doors}</dd><dt>Class</dt><dd>${b.section||'—'}</dd><dt>Yardi code</dt><dd>${b.code}</dd><dt>To ZEN office</dt><dd>${b.office_min??'—'} min</dd></dl>
   <h3>Drive time to pod-mates</h3><ul class="list">${mates.length?mates.map(o=>`<li><span>${o.x.name}</span><span>${o.m} min</span></li>`).join(''):'<li><span>Single-building pod</span><span></span></li>'}</ul>
   <h3>Nearest buildings in other pods</h3><ul class="list">${near.map(o=>`<li><span>${o.x.name} (${o.x.pod})</span><span>${o.m} min</span></li>`).join('')}</ul>`;}
 function intro(){const g=[["C-Core pod (Eleven, The Loft)",B.filter(b=>b.pod==="C-Core")],["SK-Saskatoon pod (Cielo, Greyson, Lawson Village)",B.filter(b=>b.pod==="SK-Saskatoon")],["The Barracks (pod E4)",[byCode["321"]]],["The Edge (pod E2)",[byCode["392"]]],["Norwood Village (pod E7)",[byCode["373"]]]];
   document.getElementById('detail').innerHTML=`<h2>EliseAI pilot</h2><p class="hint">Two complete pods plus three Edmonton buildings. Click any building on the map for drive times.</p><ul class="list">${g.map(([n,l])=>`<li><span>${n}</span><span>${l.reduce((s,b)=>s+b.doors,0)} doors</span></li>`).join('')}<li><strong>Total</strong><span><strong>${B.filter(isPilot).reduce((s,b)=>s+b.doors,0)} doors</strong></span></li></ul>`;}
 document.getElementById('reg').innerHTML=ORDER.map(p=>{const l=B.filter(b=>b.pod===p),P=POD[p];return `<tr tabindex="0" data-p="${p}"><td><span class="sw" style="background:${P.c}"></span><strong>${p}</strong></td><td>${P.t}</td><td>${l.map(b=>isPilot(b)?`<strong>${b.name} ★</strong>`:b.name).join(', ')}</td><td class="n">${l.length}</td><td class="n">${l.reduce((s,b)=>s+b.doors,0)}</td><td class="n">${P.far!=null?P.far+' min':'—'}</td><td class="n">${P.loop!=null?P.loop+' min':'—'}</td></tr>`}).join('');
 document.querySelectorAll('#reg tr').forEach(r=>{const go=()=>{const l=B.filter(b=>b.pod===r.dataset.p);if(l.length===1)map.setView([l[0].lat,l[0].lon],14);else map.fitBounds(l.map(b=>[b.lat,b.lon]),{padding:[50,50]});document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'});};r.addEventListener('click',go);r.addEventListener('keydown',e=>{if(e.key==='Enter')go();});});
+document.getElementById('dir').innerHTML=B.slice().sort((a,c)=>ORDER.indexOf(a.pod)-ORDER.indexOf(c.pod)||a.name.localeCompare(c.name)).map(b=>`<tr data-c="${b.code}"><td>${isPilot(b)?'<strong>'+b.name+' ★</strong>':b.name}</td><td><span class="sw" style="background:${POD[b.pod].c}"></span>${b.pod}</td><td>${b.addr||'—'}</td><td>${b.market}</td><td class="n">${b.doors}</td><td class="n">${b.lat.toFixed(6)}</td><td class="n">${b.lon.toFixed(6)}</td><td><a href="https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lon}" target="_blank" rel="noopener">Open</a></td></tr>`).join('');
+document.querySelectorAll('#dir tr').forEach(r=>r.addEventListener('click',e=>{if(e.target.tagName==='A')return;const b=byCode[r.dataset.c];map.setView([b.lat,b.lon],15);select(b.code);document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'});}));
 zoomTo('Edmonton');intro();
 </script>
 </body>
