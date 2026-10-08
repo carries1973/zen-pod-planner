@@ -1205,8 +1205,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
     setTimeout(()=>{el.textContent=el.dataset.label;},1600);
   }
 
+  // Vacant doors lead every callout: available now, then not-ready, then committed,
+  // then doors becoming available, then leased. Stable, so ties keep the data's order.
+  function unitRank(u){
+    if(u.status==='Vacant')return {available:0,'not-ready':1,committed:2}[u.avail_class]??0;
+    return u.avail_class==='becoming'?3:4;
+  }
   function unitRows(h){
-    return h.units.map(u=>{
+    return h.units.map((u,i)=>[u,i]).sort((a,b)=>unitRank(a[0])-unitRank(b[0])||a[1]-b[1]).map(x=>x[0]).map(u=>{
       const isVac=u.status==='Vacant';
       return '<div style="border-top:1px dashed #e5e9ee;padding:5px 0">'
         +'<div style="display:flex;justify-content:space-between;gap:8px"><b>Unit '+u.unit+'</b>'
