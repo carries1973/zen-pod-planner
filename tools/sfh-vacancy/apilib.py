@@ -104,7 +104,13 @@ def load_unit_state(path, asof):
                 'scope': scope, 'unit': unit,
                 'code': (r.get('code') or '').strip(),
                 'offboard': bool(vaclib.offboard_hit(scope)),
-                'internal': bool(INTERNAL_PAT.search(scope)),
+                # RULED 2026-10-08 by Carrie: owner-managed ('notmanaged' bucket --
+                # SF268/296/300/310) is OFFLINE for this map. No pin, no count.
+                # Excluded through the same door as 'internal' so the coverage
+                # bridge still closes; 'owner' lets the removal say why.
+                'owner': (r.get('scope') or '').strip() == 'notmanaged',
+                'internal': bool(INTERNAL_PAT.search(scope))
+                            or (r.get('scope') or '').strip() == 'notmanaged',
                 'status': status, 'preleased': pre,
                 'bedbath': _bedbath(r.get('beds'), r.get('baths')),
                 'beds': (r.get('beds') or '').strip(),

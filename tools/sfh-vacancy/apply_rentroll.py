@@ -439,7 +439,11 @@ def main():
 
     # ---- 4. map doors the active roll does not claim -----------------------
     off_parsed = {s: addr.parse(s) for s in
-                  {d['scope'] for d in doors_all if d['offboard'] or d['internal']}}
+                  {d['scope'] for d in doors_all
+                   if d['offboard'] or (d['internal'] and not d.get('owner'))}}
+    owner_codes = {d['code'] for d in doors_all if d.get('owner') and d['code']}
+    owner_parsed = {s: addr.parse(s) for s in
+                    {d['scope'] for d in doors_all if d.get('owner')}}
     active_parsed = {s: addr.parse(s) for s in {d['scope'] for d in active}}
     idx_addr = {i: cover.home_addr(h) for i, h in enumerate(homes)}
     removed = []
@@ -464,6 +468,10 @@ def main():
     for i, uis in drop.items():
         h = homes[i]
         ha = idx_addr[i]
+        own = next((s for s, pa in owner_parsed.items() if addr.same_place(pa, ha)), None)
+        if not own:   # the pin carries its Buildium code(s); a name match can miss
+            hc = set(h.get('codes') or ([h['code']] if h.get('code') else []))
+            own = next((c for c in hc if c in owner_codes), None)
         off = next((s for s, pa in off_parsed.items() if addr.same_place(pa, ha)), None)
         act = next((s for s, pa in active_parsed.items() if addr.same_place(pa, ha)), None)
         for ui in uis:
@@ -482,6 +490,8 @@ def main():
                         dup = d2
             if dup:
                 why = 'the same door is already pinned as "%s"' % dup[:44]
+            elif own:
+                why = 'owner-managed, offline for this map (%s)' % own[:44]
             elif off:
                 why = 'off-boarded in Buildium (%s)' % off[:44]
             elif act:
