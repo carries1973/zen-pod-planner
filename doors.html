@@ -965,10 +965,6 @@ main{flex:1 1 auto;min-height:0;position:relative}
       </div>
       <div id="podcard" class="podcard" hidden></div>
       <div class="mlist" id="podlist"></div>
-      <details class="recon">
-        <summary>What changed on 23 Oct, and what is still open</summary>
-        <div id="reconBody"></div>
-      </details>
     </div>
     <div id="map"></div>
   </section>
@@ -1225,17 +1221,6 @@ function popupHTML(b){
     (others.length?'<details class="acc" style="margin-top:6px"><summary style="cursor:pointer;font-size:11px;color:#4a5b6b">Nearest buildings in other pods</summary>'+nearRows+'</details>':'')+
     '<div style="font-size:10px;color:#4a5b6b;margin-top:6px">Planner drive times, free-flow, no traffic.</div></div>';
 }
-
-// ---------- reconciliation panel (static text, built from the data) ----------
-(function(){
-  const r=D.recon;
-  const log=D.log.map(l=>'<li>'+esc(l)+'</li>').join('');
-  document.getElementById('reconBody').innerHTML=
-    '<div style="padding-top:4px">Bridge: <b>'+num(r.base)+'</b> (Oct 19 Planner list) − <b>'+num(r.linkRemoved)+'</b> Link 95 + <b>'+num(r.alcesAdded)+'</b> Alces = <b>'+num(r.total)+'</b> doors on this map.</div>'+
-    '<div style="margin-top:6px"><b>Open:</b> the Oct 23 workbook is quoted at '+num(r.workbookCited)+' before Alces, '+r.gapToWorkbook+' doors below the Planner data. Those '+r.gapToWorkbook+' are not identified. VP Leasing to confirm which building they belong to.</div>'+
-    '<div style="margin-top:6px"><b>Plan layer:</b> service days, seats, backups and rules come from the Oct 23 pod plan workbook (DRAFT, not approved). Patterns are PROPOSED. Backups are TO CONFIRM; Saskatchewan is NOT CONFIRMED. Timed tasks (shift hours, tour slots, screening blocks) are not in the map.</div>'+
-    '<ol style="margin-top:8px">'+log+'</ol>';
-})();
 
 // ---------- wiring ----------
 document.getElementById('mkt').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b)return;S.mkt=b.dataset.m;render();});
