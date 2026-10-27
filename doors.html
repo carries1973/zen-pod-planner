@@ -854,7 +854,8 @@ body{display:flex;flex-direction:column;overflow:hidden}
 .printlink{margin-left:auto;font-size:12.5px;color:#8fdcec;text-decoration:none;border:1px solid #17627d;border-radius:8px;padding:7px 12px;font-weight:600;white-space:nowrap}
 .printlink:hover{background:rgba(255,255,255,.08)}
 main{flex:1 1 auto;min-height:0;position:relative}
-.mside{display:flex;flex-direction:column;overflow:hidden}
+.mside{display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+.mside>*{flex:none}
 .kicker{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);font-weight:700}
 .sub{font-size:11.5px;color:var(--ink2);margin-top:2px;line-height:1.35}
 .fnote{font-size:10.5px;color:var(--ink2);margin-top:6px;line-height:1.35}
@@ -873,7 +874,7 @@ main{flex:1 1 auto;min-height:0;position:relative}
 .segrow .seg.off{opacity:.4}
 .segrow .sw{width:9px;height:9px;border-radius:50%;display:inline-block}
 .sfhtog{display:block;font-size:11px;color:var(--ink2);margin-top:7px}
-.mlist{flex:1 1 auto;overflow:auto;min-height:120px}
+.mlist{flex:none;overflow:visible;min-height:0}
 .mlist .grp{margin:10px 0 4px;padding:6px 10px;background:var(--ink,#12222e);color:#fff;border-radius:7px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;display:flex;justify-content:space-between}
 .prow{display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:1px solid var(--line);background:#fff;font-size:12px}
 .prow.off{opacity:.45}
@@ -953,6 +954,16 @@ main{flex:1 1 auto;min-height:0;position:relative}
 .what{border:1px solid var(--line);border-radius:8px;padding:7px 9px;margin:6px 0;background:#f7fbfc}.what .wt{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:11.5px}
 .sl{display:block;font-size:10.5px;margin:5px 0}.sl span{display:flex;justify-content:space-between}.sl input{width:100%;margin:2px 0}
 .bt small.up{color:#b03a2e;font-weight:800}.bt small.dn{color:#1f8a5b;font-weight:800}
+
+.tabbar{display:flex;position:sticky;top:0;z-index:5;background:#fff;border-bottom:2px solid var(--navy)}
+.tabbar .tb{flex:1;border:0;background:#fff;padding:9px 6px;font-size:11.5px;font-weight:800;letter-spacing:.04em;color:var(--ink2);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabbar .tb.on{color:var(--navy);border-bottom-color:#0090ae}
+.mside[data-tab="pods"] .t-staff{display:none}
+.mside[data-tab="staff"] .t-pods{display:none}
+.podcard{max-height:none}
+
+.nts{margin-top:5px;font-size:10.5px}.nts summary{cursor:pointer;color:#0a6f87;font-weight:700}.nts p{margin:5px 0}
+.podcard{scroll-margin-top:42px}
 </style></head>
 <body>
 <div class="top">
@@ -964,6 +975,7 @@ main{flex:1 1 auto;min-height:0;position:relative}
 <main>
   <section class="view map on" id="v-map">
     <div class="mside">
+      <div class="tabbar" id="tabbar"><button class="tb on" data-tab="pods">Pods &amp; filters</button><button class="tb" data-tab="staff">Staffing</button></div>
       <div class="msh">
         <div class="kicker">Pod plan · map</div>
         <div class="sub">Pods are the day-tour unit. Calgary is the pilot market. Lease-ups are not in pods (grey). Circle area = doors or open units, your choice below (8 px minimum).</div>
@@ -975,7 +987,7 @@ main{flex:1 1 auto;min-height:0;position:relative}
         </div>
         <div class="fnote" id="fnote"></div>
       </div>
-      <div class="msec">
+      <div class="msec t-pods">
         <h3>Market</h3>
         <div class="chips" id="mkt"></div>
         <h3 class="mt">Circle size</h3>
@@ -986,15 +998,15 @@ main{flex:1 1 auto;min-height:0;position:relative}
         <div class="chips" id="day"></div>
         <div class="fnote" id="dayNote"></div>
       </div>
-      <div class="msec">
+      <div class="msec t-pods">
         <input id="bsearch" class="search" type="text" placeholder="Find a building or SFH…" autocomplete="off">
         <div id="bsres"></div>
         <div class="segrow" id="segs"></div>
         <label class="sfhtog"><input type="checkbox" id="sfhTog" checked> SFH homes (dots sized by doors, coloured by pod)</label>
       </div>
-      <div id="podcard" class="podcard" hidden></div>
-      <div class="msec" id="blocks"></div>
-      <div class="mlist" id="podlist"></div>
+      <div id="podcard" class="podcard t-pods" hidden></div>
+      <div class="msec t-staff" id="blocks"></div>
+      <div class="mlist t-pods" id="podlist"></div>
     </div>
     <div id="map"></div>
   </section>
@@ -1157,7 +1169,11 @@ function stats(vis){
   if(off)parts.push(off+' pod'+(off>1?'s':'')+' off');
   document.getElementById('fnote').innerHTML=filtered
     ?'<b>Filtered:</b> '+num(d)+' of '+num(D.totals.doors)+' doors · '+pods+' of '+D.totals.pods+' pods'+(parts.length?' · '+parts.join(' · '):'')
-    :'<b>Whole portfolio:</b> '+num(D.totals.doors)+' doors in '+D.totals.bldgs+' buildings: <b>'+num(D.totals.podDoors)+' doors in '+D.totals.pods+' pods</b> and '+num(D.totals.leaseupDoors)+' doors in '+D.totals.leaseupBldgs+' lease-ups (on-site team, not in a pod; grey on the map). Plus TrailsEdge, 48 doors from the corporate roster, which sits in the SFH layer as Buildium RP169 (22 in-scope doors there; the two counts are not reconciled): '+(D.totals.bldgs+1)+' buildings, '+num(D.totals.doors+48)+' Yardi doors in all. Includes <b>Park Centre Residences</b> (177 doors, T-9 Sherwood Park), which is offboarding: ruled out of scope 26 Oct, added back 27 Oct at Carrie\'s request and flagged.<br><b>SFH (Buildium, '+D.sfhSum.asof+'):</b> '+num(D.sfhSum.doors)+' doors in '+D.sfhSum.homes+' homes: '+num(D.sfhSum.inPods)+' in pods, '+num(D.sfhSum.leaseup)+' SFH lease-up (not in pods), '+num(D.sfhSum.noPod)+' in SFH areas with no pod yet. Yardi and Buildium are separate systems, shown side by side and never reconciled.';
+    :'<b>Whole portfolio:</b> '+num(D.totals.doors)+' Yardi doors in '+D.totals.bldgs+' buildings ('+num(D.totals.podDoors)+' in '+D.totals.pods+' pods · '+num(D.totals.leaseupDoors)+' lease-up) + '+num(D.sfhSum.doors)+' SFH doors (Buildium, shown beside Yardi, never reconciled).'+
+      '<details class="nts"><summary>Notes</summary>'+
+      '<p>Lease-ups ('+D.totals.leaseupBldgs+' buildings, on-site team) are not in pods and show grey. SFH: '+num(D.sfhSum.inPods)+' doors in pods, '+num(D.sfhSum.leaseup)+' SFH lease-up, '+num(D.sfhSum.noPod)+' in SFH areas with no pod yet (as of '+D.sfhSum.asof+').</p>'+
+      '<p><b>Park Centre Residences</b> (177 doors, T-9 Sherwood Park) is offboarding: ruled out of scope 26 Oct, added back 27 Oct at Carrie\'s request, flagged.</p>'+
+      '<p>TrailsEdge, 48 doors from the corporate roster, sits in the SFH layer as Buildium RP169 (22 in-scope doors there; not reconciled). With it: '+(D.totals.bldgs+1)+' buildings, '+num(D.totals.doors+48)+' Yardi doors.</p></details>';
 }
 
 // ---------- filter chips ----------
@@ -1353,6 +1369,7 @@ function pickSeat(id){
 
 // ---------- pod card ----------
 function selectPod(key,fit){
+  if(key&&SIDE.dataset.tab!=='pods')setTab('pods');
   S.sel=key;
   if(key&&!S.pods.has(key))S.pods.add(key);
   render();
@@ -1508,6 +1525,11 @@ document.getElementById('podlist').addEventListener('click',e=>{
 })();
 
 document.getElementById('wkleg').addEventListener('click',e=>{const t=e.target.closest('[data-blk]'); if(t)pickSeat(t.dataset.blk);});
+// sidebar tabs: Pods & filters | Staffing
+const SIDE=document.querySelector('.mside');
+function setTab(t){SIDE.dataset.tab=t;document.querySelectorAll('#tabbar .tb').forEach(x=>x.classList.toggle('on',x.dataset.tab===t));SIDE.scrollTop=0;}
+document.getElementById('tabbar').addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(t)setTab(t.dataset.tab);});
+SIDE.dataset.tab='pods';
 // ---------- open ----------
 map.invalidateSize();
 render();
