@@ -1081,7 +1081,7 @@ function stats(vis){
   const d=vis.reduce((a,b)=>a+b.doors,0), sf=D.sfh.filter(sfhOK).length;
   const pods=new Set(vis.map(b=>b.pod)).size;
   document.getElementById('s-d').textContent=num(d);
-  document.getElementById('s-b').textContent=vis.length;
+  document.getElementById('s-b').textContent=new Set(vis.map(b=>b.code)).size;
   document.getElementById('s-p').textContent=pods;
   document.getElementById('s-u').textContent=S.sfh?sf:0;
   const filtered=d!==D.totals.doors||pods!==D.totals.pods;
